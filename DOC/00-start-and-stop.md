@@ -36,6 +36,8 @@ npx vite --host --port 3124
 
 Wait until it prints the Local and Network URLs. Open http://127.0.0.1:3124 on this PC. People on the same network open the Network URL, for example http://192.168.1.20:3124. Windows may ask to allow Node.js through the firewall the first time. Allow it on private networks.
 
+If the page only prints http://127.0.0.1:3124 or http://localhost:3124 and no Network line, the PC is running an old copy of the code. Run `git pull origin main`. `npm run dev` in `frontend` now starts on all network addresses on port 3124.
+
 If other PCs cannot open the Network URL even though it is printed, Windows Firewall is blocking them. This is common when the PC network is set to Public. Double-click `allow-network.bat` once on the PC that runs the servers and accept the administrator prompt. It opens ports 3124 and 4213 to the local network only. `start-dpu.bat` prints a reminder when that rule is missing. If no Network line is printed at all, the PC has no active network connection, or the code is old: run `git pull origin main` and start again.
 
 From the project folder, the same two commands are:
