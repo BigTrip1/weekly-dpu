@@ -113,7 +113,7 @@ MongoDB is a separate program. This app expects it on `mongodb://127.0.0.1:27017
 
 MongoDB must already be listening on port 27017.
 
-From the project folder, double-click `start-dpu.bat`, or follow [DOC/00-start-and-stop.md](DOC/00-start-and-stop.md) and start the two processes by hand. Then open http://127.0.0.1:3124.
+From the project folder, double-click `start-dpu.bat`, or follow [DOC/00-start-and-stop.md](DOC/00-start-and-stop.md) and start the two processes by hand. Then open http://127.0.0.1:3124. The start script and both servers also print a Network address, for example http://192.168.1.20:3124, which other people on the same network can open. The page is not password protected, so only start it on a network you trust.
 
 The API window prints the Windows account that started it, the PC name, each request, and a one-line summary after every upload. There is no login, so that window cannot show a signed-in user.
 

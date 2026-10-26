@@ -535,10 +535,15 @@ async function ensureSetup(): Promise<void> {
 
 ensureSetup()
   .then(() => {
-    app.listen(port, () => {
+    app.listen(port, "0.0.0.0", () => {
       const account = os.userInfo().username;
       console.log(`Started by ${account} on ${os.hostname()}`);
       console.log(`DPU API listening on http://127.0.0.1:${port}`);
+      for (const list of Object.values(os.networkInterfaces())) {
+        for (const item of list ?? []) {
+          if (item.family === "IPv4" && !item.internal) console.log(`  Network:   http://${item.address}:${port}`);
+        }
+      }
     });
   })
   .catch((error) => {

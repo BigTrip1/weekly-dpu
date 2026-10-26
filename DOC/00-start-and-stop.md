@@ -25,16 +25,16 @@ cd backend
 npx tsc && node dist/index.js
 ```
 
-Wait until it prints `DPU API listening on http://127.0.0.1:4213`. The lines above that name the Windows account and the PC.
+Wait until it prints `DPU API listening on http://127.0.0.1:4213`. The lines above that name the Windows account and the PC, and the lines below list the Network addresses of this PC.
 
 Open a second terminal in the project folder.
 
 ```bat
 cd frontend
-npx vite --host 127.0.0.1 --port 3124
+npx vite --host --port 3124
 ```
 
-Wait until it prints a local URL. Open http://127.0.0.1:3124.
+Wait until it prints the Local and Network URLs. Open http://127.0.0.1:3124 on this PC. People on the same network open the Network URL, for example http://192.168.1.20:3124. Windows may ask to allow Node.js through the firewall the first time. Allow it on private networks.
 
 From the project folder, the same two commands are:
 
