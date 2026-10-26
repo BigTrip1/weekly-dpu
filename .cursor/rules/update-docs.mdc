@@ -1,0 +1,21 @@
+---
+description: Update README and DOC when a change affects how the app is run or explained
+alwaysApply: true
+---
+
+# Keep the docs in step with the app
+
+When a change alters setup, startup, folders, ports, the workbook columns, upload behaviour, department mapping, cleansing rules, or what the dashboard shows, update the documents that describe that behaviour in the same piece of work.
+
+- `README.md` is the front door. Update it when the overview, the data flow, or the repo map changes.
+- `DOC/` holds the procedures. Update the specific guide, for example `DOC/00-start-and-stop.md` for how the frontend and backend are started, rather than adding a second copy of the same steps to the README.
+
+The frontend lives in `frontend/` and the API lives in `backend/`. Do not put `client/` or `server/` back into the docs as the folder names.
+
+```markdown
+# Bad
+Leave DOC/00-start-and-stop.md saying `cd server` after the folder was renamed to `backend`.
+
+# Good
+Change the start commands in DOC/00-start-and-stop.md and the README run section to `cd backend` and `cd frontend` in the same change.
+```

@@ -1,0 +1,13 @@
+# Local MongoDB for the DPU app. The API uses mongodb://127.0.0.1:27017/weekly_dpu.
+# If MongoDB is already running on this machine, you do not need to start this.
+services:
+  mongo:
+    image: mongo:7
+    container_name: weekly-dpu-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - weekly_dpu_mongo:/data/db
+
+volumes:
+  weekly_dpu_mongo:

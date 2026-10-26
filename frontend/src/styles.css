@@ -1,0 +1,202 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+@import "@fontsource/barlow-condensed/800.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* JCB light theme: paper page, white cards, black bands, JCB yellow accent. */
+:root {
+  --radius: 0.625rem;
+  --jcb-yellow: #ffcd00;
+  --background: #f4f1e8;
+  --foreground: #161616;
+  --card: #ffffff;
+  --card-foreground: #161616;
+  --popover: #ffffff;
+  --popover-foreground: #161616;
+  --primary: #ffcd00;
+  --primary-foreground: #161616;
+  --secondary: #ebe7d8;
+  --secondary-foreground: #161616;
+  --muted: #ece8da;
+  --muted-strong: #c9c3ad;
+  --muted-foreground: #5f5b4d;
+  --accent: #f1ecd6;
+  --accent-foreground: #161616;
+  --destructive: #c62828;
+  --border: #d9d4c4;
+  --input: #cfc9b4;
+  --input-bg: #ffffff;
+  --ring: #d4a900;
+  --table-head: #161616;
+  --table-head-foreground: #ffcd00;
+  --header: #ffcd00;
+  --header-foreground: #161616;
+  --up: #b42318;
+  --up-soft: #fde7e4;
+  --down: #067647;
+  --down-soft: #dcf5e7;
+  --warn: #8a5a00;
+  --warn-soft: #fff1cc;
+  --dept-1: #e0b000;
+  --dept-2: #ef6c00;
+  --dept-3: #2a74c7;
+  --dept-4: #14917f;
+  --dept-5: #7a5bd6;
+  --dept-6: #5f5b4d;
+  --scrim: rgba(22, 22, 22, 0.08);
+}
+
+/* JCB dark theme: near-black surfaces with JCB yellow as the only loud colour. */
+.dark {
+  --background: #0e0e0e;
+  --foreground: #f2f2f2;
+  --card: #171717;
+  --card-foreground: #f2f2f2;
+  --popover: #1c1c1c;
+  --popover-foreground: #f2f2f2;
+  --primary: #ffcd00;
+  --primary-foreground: #101010;
+  --secondary: #222222;
+  --secondary-foreground: #f2f2f2;
+  --muted: #1f1f1f;
+  --muted-strong: #3a3a3a;
+  --muted-foreground: #a0a0a0;
+  --accent: #262626;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: #2b2b2b;
+  --input: #3a3a3a;
+  --input-bg: #121212;
+  --ring: #ffcd00;
+  --table-head: #222222;
+  --table-head-foreground: #ffcd00;
+  --header: #131313;
+  --header-foreground: #f2f2f2;
+  --up: #ff7b72;
+  --up-soft: rgba(255, 91, 80, 0.14);
+  --down: #4ade80;
+  --down-soft: rgba(74, 222, 128, 0.13);
+  --warn: #ffcd00;
+  --warn-soft: rgba(255, 205, 0, 0.12);
+  --dept-1: #ffcd00;
+  --dept-2: #ff8a1f;
+  --dept-3: #5ba7ff;
+  --dept-4: #2dd4bf;
+  --dept-5: #a78bfa;
+  --dept-6: #9ca3af;
+  --scrim: rgba(255, 255, 255, 0.04);
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", ui-sans-serif, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-bg: var(--input-bg);
+  --color-ring: var(--ring);
+  --color-table-head: var(--table-head);
+  --color-table-head-foreground: var(--table-head-foreground);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
+  --color-up: var(--up);
+  --color-up-soft: var(--up-soft);
+  --color-down: var(--down);
+  --color-down-soft: var(--down-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-jcb: var(--jcb-yellow);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    min-height: 100vh;
+    margin: 0;
+  }
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  ::selection {
+    background: var(--jcb-yellow);
+    color: #111;
+  }
+  /* Slim scrollbars that follow the theme. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-strong) transparent;
+  }
+}
+
+/* JCB hazard stripe used on the header rule and the hero band. */
+.hazard {
+  background-image: repeating-linear-gradient(-45deg, #111 0 10px, var(--jcb-yellow) 10px 20px);
+}
+
+/* Faint grid shimmer inside the header band. */
+.header-grid {
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.dark .header-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 205, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 205, 0, 0.06) 1px, transparent 1px);
+}
+
+@keyframes grid-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 28px;
+  }
+}
+.header-grid {
+  animation: grid-drift 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-grid {
+    animation: none;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}
