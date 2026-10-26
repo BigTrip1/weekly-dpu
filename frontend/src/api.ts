@@ -1,4 +1,4 @@
-export type WeekOption = { week: string; label: string; faults: number };
+export type WeekOption = { week: string; label: string; faults: number; shutdown: string | null };
 export type MonthOption = { month: string; label: string; weeks: WeekOption[] };
 
 export type DashboardRow = {
@@ -40,7 +40,9 @@ export type TrendWeek = {
   panels: Record<string, number>;
 };
 
-export type TrendResponse = { panels: string[]; weeks: TrendWeek[] };
+export type SkippedWeek = { week: string; label: string; reason: string };
+
+export type TrendResponse = { panels: string[]; year: number; weeks: TrendWeek[]; skipped: SkippedWeek[] };
 
 export type DrillRow = {
   id: string;
@@ -120,8 +122,28 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export type YtdOption = { value: string; year: number; label: string; from: string; to: string };
 
+export type YearOption = { year: number; current: boolean; ytd: YtdOption };
+
 export function getPeriods() {
-  return request<{ months: MonthOption[]; ytd: YtdOption | null }>("/api/periods");
+  return request<{ months: MonthOption[]; years: YearOption[] }>("/api/periods");
+}
+
+export type ShutdownWeek = { week: string; reason: string };
+
+export function getShutdownWeeks() {
+  return request<{ weeks: ShutdownWeek[] }>("/api/shutdown-weeks");
+}
+
+export function addShutdownWeek(date: string, reason: string) {
+  return request<ShutdownWeek>("/api/shutdown-weeks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date, reason }),
+  });
+}
+
+export function removeShutdownWeek(week: string) {
+  return request<{ ok: boolean }>(`/api/shutdown-weeks/${week}`, { method: "DELETE" });
 }
 
 export function getDashboard(month: string, week: string) {

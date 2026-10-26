@@ -172,7 +172,7 @@ export function DashboardCharts({ dashboard, trend, trendLoading, onDrill }: Pro
           <div>
             <CardTitle>Recent weeks by department</CardTitle>
             <CardDescription className="mt-1">
-              Eight weeks to the selected period, by Failed Date week{hasPartial ? ". * marks a partial week" : ""}. Select a point to open that week.
+              Up to eight working weeks to the selected period, by Failed Date week{hasPartial ? ". * marks a partial week" : ""}. Select a point to open that week.
             </CardDescription>
           </div>
         </CardHeader>
@@ -180,7 +180,9 @@ export function DashboardCharts({ dashboard, trend, trendLoading, onDrill }: Pro
           {trendLoading && !trend ? (
             <Skeleton className="h-[250px] w-full" />
           ) : trendData.length === 0 ? (
-            <div className="grid h-[250px] place-items-center text-sm text-muted-foreground">No weekly history yet.</div>
+            <div className="grid h-[250px] place-items-center px-4 text-center text-sm text-muted-foreground">
+              {trend?.year ? `No working weeks in ${trend.year} yet. Shutdown weeks are left out.` : "No weekly history yet."}
+            </div>
           ) : (
             <ChartContainer config={deptConfig} className="aspect-auto h-[250px] w-full">
               <LineChart data={trendData} margin={{ left: -8, right: 28, top: 8, bottom: 0 }}>
@@ -204,6 +206,18 @@ export function DashboardCharts({ dashboard, trend, trendLoading, onDrill }: Pro
                 ))}
               </LineChart>
             </ChartContainer>
+          )}
+          {trend && trend.skipped.length > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Left out, production shut:{" "}
+              {trend.skipped.map((item, index) => (
+                <span key={item.week}>
+                  {index > 0 && ", "}
+                  <span className="font-semibold text-foreground">{shortWeek(item.label)}</span> ({item.reason})
+                </span>
+              ))}
+              .
+            </p>
           )}
         </CardContent>
       </Card>

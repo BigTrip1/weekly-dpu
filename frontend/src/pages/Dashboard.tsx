@@ -11,7 +11,7 @@ import {
   type DrillRow,
   type MonthOption,
   type TrendResponse,
-  type YtdOption,
+  type YearOption,
 } from "@/api";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { DepartmentPanel } from "@/components/dashboard/DepartmentPanel";
@@ -47,7 +47,7 @@ function deltaBadge(current: number, previous: number | null | undefined, percen
 export function Dashboard() {
   const [params, setParams] = useSearchParams();
   const [months, setMonths] = useState<MonthOption[]>([]);
-  const [ytd, setYtd] = useState<YtdOption | null>(null);
+  const [years, setYears] = useState<YearOption[]>([]);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [trend, setTrend] = useState<TrendResponse | null>(null);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -71,13 +71,13 @@ export function Dashboard() {
       .then((result) => {
         if (!active) return;
         setMonths(result.months);
-        setYtd(result.ytd);
+        setYears(result.years);
         if (!result.months.length) {
           setLoading(false);
           return;
         }
-        // A year to date link keeps its period when the year is still in the data.
-        if (result.ytd && month === result.ytd.value && week === "all") return;
+        // A year link keeps its period when that year is still in the data.
+        if (result.years.some((item) => item.ytd.value === month) && week === "all") return;
         const requested = result.months.find((item) => item.month === month) ?? result.months[result.months.length - 1];
         const weekIsKnown = week === "all" || requested.weeks.some((item) => item.week === week);
         if (month && week && weekIsKnown && requested.month === month) return;
@@ -166,6 +166,30 @@ export function Dashboard() {
 
   const selectedMonth = useMemo(() => months.find((item) => item.month === month), [months, month]);
 
+  // The year follows the period in the address: 2026-10 and ytd-2026 are both 2026.
+  const year = Number(month.startsWith("ytd-") ? month.slice(4) : month.slice(0, 4)) || 0;
+  const yearChoices = useMemo(() => [...years].sort((a, b) => b.year - a.year), [years]);
+  const yearOption = years.find((item) => item.year === year) ?? null;
+  const yearMonths = useMemo(() => months.filter((item) => item.month.startsWith(`${year}-`)), [months, year]);
+
+  function busiestWeek(option: MonthOption) {
+    return option.weeks.reduce((best, item) => (item.faults > best.faults ? item : best), option.weeks[0]);
+  }
+
+  // Changing the year starts that year's own view: its newest month, or the whole year when year to date is on.
+  function chooseYear(nextYear: number) {
+    const target = years.find((item) => item.year === nextYear);
+    if (!target) return;
+    if (isYtd) {
+      updatePeriod(target.ytd.value, "all");
+      return;
+    }
+    const inYear = months.filter((item) => item.month.startsWith(`${nextYear}-`));
+    const latest = inYear[inYear.length - 1];
+    if (latest) updatePeriod(latest.month, busiestWeek(latest).week);
+    else updatePeriod(target.ytd.value, "all");
+  }
+
   function updatePeriod(nextMonth: string, nextWeek: string) {
     const next = new URLSearchParams(params);
     next.set("month", nextMonth);
@@ -228,15 +252,16 @@ export function Dashboard() {
 
   const isYtd = month.startsWith("ytd-");
   const view = dashboard?.view ?? "weekly";
-  const viewName = view === "ytd" ? "Year to date view" : view === "monthly" ? "Monthly view" : "Weekly view";
+  const fullYear = view === "ytd" && Boolean(dashboard?.periodLabel.startsWith("Full year"));
+  const viewName =
+    view === "ytd" ? (fullYear ? "Full year view" : "Year to date view") : view === "monthly" ? "Monthly view" : "Weekly view";
   const previousLabel = view === "ytd" ? "Prev year QTY" : view === "monthly" ? "Prev month QTY" : "Prev week QTY";
 
-  // Back from year to date to the busiest week of the newest month.
+  // Back from the year view to the busiest week of the newest month in that year.
   function leaveYtd() {
-    const latest = months[months.length - 1];
+    const latest = yearMonths[yearMonths.length - 1];
     if (!latest) return;
-    const busiest = latest.weeks.reduce((best, item) => (item.faults > best.faults ? item : best), latest.weeks[0]);
-    updatePeriod(latest.month, busiest.week);
+    updatePeriod(latest.month, busiestWeek(latest).week);
   }
 
   return (
@@ -245,21 +270,35 @@ export function Dashboard() {
         aria-label="Period filters"
         className="z-30 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-border bg-card p-2.5 shadow-sm md:sticky md:top-[77px]"
       >
+        <div className="flex items-center gap-2.5">
+          <label className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">Year</label>
+          <Select value={year ? String(year) : undefined} onValueChange={(next) => chooseYear(Number(next))}>
+            <SelectTrigger aria-label="Year" className="min-w-[6.5rem]">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {yearChoices.map((item) => (
+                <SelectItem key={item.year} value={String(item.year)}>
+                  {item.year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex min-w-[12rem] items-center gap-2.5">
           <label className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">Month</label>
           <Select
             value={isYtd ? undefined : month || undefined}
             onValueChange={(nextMonth) => {
               const option = months.find((item) => item.month === nextMonth);
-              const busiest = option?.weeks.reduce((best, item) => (item.faults > best.faults ? item : best), option.weeks[0]);
-              updatePeriod(nextMonth, busiest?.week ?? "all");
+              updatePeriod(nextMonth, option ? busiestWeek(option).week : "all");
             }}
           >
             <SelectTrigger aria-label="Month">
-              <SelectValue placeholder={isYtd ? "Not used for year to date" : "Choose a month"} />
+              <SelectValue placeholder={isYtd ? "Not used for the year view" : "Choose a month"} />
             </SelectTrigger>
             <SelectContent>
-              {months.map((item) => (
+              {yearMonths.map((item) => (
                 <SelectItem key={item.month} value={item.month}>
                   {item.label}
                 </SelectItem>
@@ -278,21 +317,22 @@ export function Dashboard() {
               {selectedMonth?.weeks.map((item) => (
                 <SelectItem key={item.week} value={item.week}>
                   {item.label}
+                  {item.shutdown ? ` (${item.shutdown})` : ""}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        {ytd && (
+        {yearOption && (
           <Button
             type="button"
             size="sm"
             variant={isYtd ? "default" : "outline"}
             aria-pressed={isYtd}
-            onClick={() => (isYtd ? leaveYtd() : updatePeriod(ytd.value, "all"))}
-            title={`${ytd.label}: 1 Jan to ${ytd.to}`}
+            onClick={() => (isYtd ? leaveYtd() : updatePeriod(yearOption.ytd.value, "all"))}
+            title={`${yearOption.ytd.label}: 1 Jan to ${yearOption.ytd.to}`}
           >
-            <CalendarRangeIcon /> Year to date
+            <CalendarRangeIcon /> {yearOption.current ? "Year to date" : "Full year"}
           </Button>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">

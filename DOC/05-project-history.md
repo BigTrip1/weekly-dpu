@@ -30,6 +30,8 @@ Comment rules group different sentences for the same fault. They were extended w
 
 ## Dashboard
 
+The Dashboard has a Year filter ahead of Month, so a new year starts with its own months and an empty trend chart. The weekly trend chart no longer includes production shutdown weeks (25 May, 20 July, 27 July, 3 August, 28 September and 28 December 2026, then 26 July, 2 August, 9 August, 27 September and 27 December 2027), because a week with almost no builds pulled the lines to zero. The list is stored in the `shutdown_weeks` collection, seeded once per year, only for shutdowns of five days or more, and edited from the Shutdown weeks card on the Rules page.
+
 The Upload page also accepts a `.csv` of the same raw faults extract. The importer reads it as text, detects the delimiter and encoding, and normalises dates and times to the same stored values as the workbook.
 
 A year to date view was added to the Dashboard: a Year to date button beside the Week filter selects 1 January to the newest fault, compared with the same dates a year earlier (period value `ytd-YYYY` in the API). The nav bar now shows the official JCB logo image in place of the text badge.

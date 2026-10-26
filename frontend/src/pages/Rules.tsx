@@ -5,6 +5,7 @@ import { CircleAlertIcon, Loader2Icon, PencilIcon, PlusIcon, SearchIcon, Trash2I
 import { createRule, deleteRule, getRules, updateRule, type Rule } from "@/api";
 import { ChipInput } from "@/components/ChipInput";
 import { PageHeader } from "@/components/PageHeader";
+import { ShutdownWeeks } from "@/components/ShutdownWeeks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -161,6 +162,8 @@ export function Rules() {
           </Button>
         }
       />
+
+      <ShutdownWeeks />
 
       {error && !sheetOpen && (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">

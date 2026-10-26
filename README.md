@@ -14,12 +14,13 @@ The page is a JCB themed dashboard. It opens in dark mode, and the sun and moon 
 - Two React Bits components are copied in: a count-up for the headline figures and a spotlight hover on the figure cards.
 - The header carries the official JCB logo from `frontend/public/jcb-logo.png`. Replace that file to change it.
 - Fonts are bundled with the app, so no internet connection is needed at run time.
-- The dashboard has a chart row (faults by department, share of mapped faults, and the last eight weeks by department) above the six ranked panels. Selecting a bar, a donut slice, a legend name, or a point on the weekly lines opens the source records for that department. A point narrows the records to that week.
+- The dashboard has a chart row (faults by department, share of mapped faults, and the last eight working weeks by department) above the six ranked panels. Selecting a bar, a donut slice, a legend name, or a point on the weekly lines opens the source records for that department. A point narrows the records to that week.
 
 ## What you can do
 
 - Upload the weekly faults extract from the Upload page, as an `.xlsx` workbook or a `.csv` file with the same 17 columns.
-- Read the six panels for a month, a single week, every week in the month, or the year to date (the Year to date button beside the Week filter).
+- Pick a year, then read the six panels for a month, a single week, every week in the month, or the whole year (the Year to date button beside the Week filter).
+- Say which weeks production was shut, so the weekly trend charts leave them out (the Shutdown weeks card on the Rules page).
 - Open a fault count and see the original comment beside the cleansed name, plus who recorded it.
 - Open Analytics to look at the same faults from other angles: patterns in the recorded fields, the cleansed faults, and a pick-a-chart explorer. See the Analytics section below.
 - Map a Failed To value onto an executive department, or hide it.
@@ -75,6 +76,10 @@ flowchart TD
 ```
 
 Year to date runs from 1 January of the year of the newest fault to that fault, by Failed Date. It is compared with the same calendar days of the year before. When no faults exist for those days, the trend badges show No comparison. Month and Week are not used in this view.
+
+The Year filter is the first selector. It lists every year that has faults, newest first, and the Month list shows only the months of the chosen year. The newest year opens by default, so when the first faults of a new year are uploaded the Dashboard starts that year with its own empty trend chart. Earlier years stay available in the Year filter, and their button reads Full year instead of Year to date.
+
+Shutdown weeks are weeks when production was shut. 2026 starts with the weeks commencing 25 May (Spring Bank Holiday and Whitsun), 20 July, 27 July and 3 August (summer), 28 September (autumn) and 28 December (Christmas). 2027 adds the weeks commencing 26 July, 2 August and 9 August (summer), 27 September (autumn) and 27 December (Christmas). Only shutdowns of five days or more are listed, so single bank holidays and the four-day Whitsun shutdown in 2027 (1 to 4 June) are not. The weekly trend chart on the Dashboard and the Week commencing breakdown in the Analytics Explorer leave these weeks out, and the chart notes which ones. The trend chart also only holds weeks that commence in the selected year. Totals, panels, the comparison with the previous week, drill-downs and the other Analytics charts still count every fault. A shutdown week can still be picked in the Week filter, where it is labelled. Each year's list is added once the first time the API starts, so a week removed on the Rules page stays removed. Add later years' weeks on the Rules page ahead of time.
 
 A week that crosses a month boundary is listed under both months, but each month only counts the days whose Failed Date falls in that month. The comparison for a chosen week is the whole previous week, including days that fall in the other month.
 

@@ -45,6 +45,6 @@ The page is only bound to `127.0.0.1` when started by the bat file or the manual
 
 ## Files worth knowing
 
-- `backend/.env` is not required. `MONGO_URL` and `MONGO_DB` override the defaults if you set them in the environment. `PORT` overrides 4213.
+- `backend/.env` is not required. `MONGO_URL` and `MONGO_DB` override the defaults if you set them in the environment. `PORT` overrides 4213. `DPU_API_PORT` tells the Vite dev server which API port to forward `/api` to, for running a second copy on other ports.
 - Uploaded workbooks are parsed from a temporary file and then deleted. They are not kept in `backend/uploads`.
 - `samples/mock-faults-jan-2026-to-date.xlsx` is a fictional extract for an upload test. Read [02-upload-sop.md](02-upload-sop.md) before loading it into a database that already holds real faults.

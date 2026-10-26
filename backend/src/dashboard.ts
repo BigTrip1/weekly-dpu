@@ -1,5 +1,6 @@
 import type { Db, Filter } from "mongodb";
 import { addDays, formatMonth, formatWeek, previousMonth, weekEnd } from "./dates.js";
+import { shutdownMap } from "./shutdowns.js";
 import { PANELS } from "./types.js";
 
 type PeriodMatch = Filter<Record<string, unknown>>;
@@ -13,30 +14,43 @@ export async function getPeriods(db: Db) {
     ])
     .toArray();
 
-  const months = new Map<string, { month: string; label: string; weeks: { week: string; label: string; faults: number }[] }>();
+  const shutdowns = await shutdownMap(db);
+  type WeekOption = { week: string; label: string; faults: number; shutdown: string | null };
+  const months = new Map<string, { month: string; label: string; weeks: WeekOption[] }>();
   for (const row of rows) {
     const month = row._id.month;
     const week = row._id.week;
     if (!month || !week) continue;
     const entry = months.get(month) ?? { month, label: formatMonth(month), weeks: [] };
-    entry.weeks.push({ week, label: formatWeek(week), faults: row.faults });
+    entry.weeks.push({ week, label: formatWeek(week), faults: row.faults, shutdown: shutdowns.get(week) ?? null });
     months.set(month, entry);
   }
-  const [bounds] = await db
+  const yearRows = await db
     .collection("faults")
-    .aggregate<{ min: string; max: string; faults: number }>([
+    .aggregate<{ _id: string; max: string }>([
       { $match: { failedDate: { $regex: /^\d{4}-\d{2}-\d{2}$/ } } },
-      { $group: { _id: null, min: { $min: "$failedDate" }, max: { $max: "$failedDate" } } },
+      { $group: { _id: { $substr: ["$failedDate", 0, 4] }, max: { $max: "$failedDate" } } },
+      { $sort: { _id: 1 } },
     ])
     .toArray();
 
-  // Year to date covers the year of the newest fault, from 1 January to that fault.
-  let ytd: { value: string; year: number; label: string; from: string; to: string } | null = null;
-  if (bounds?.max) {
-    const year = Number(bounds.max.slice(0, 4));
-    ytd = { value: `ytd-${year}`, year, label: `Year to date ${year}`, from: `${year}-01-01`, to: bounds.max };
-  }
-  return { months: [...months.values()], ytd };
+  // One entry per year in the data, newest last. The newest year is year to date. An earlier year is the full year.
+  const years = yearRows.map((row, index) => {
+    const year = Number(row._id);
+    const current = index === yearRows.length - 1;
+    return {
+      year,
+      current,
+      ytd: {
+        value: `ytd-${year}`,
+        year,
+        label: current ? `Year to date ${year}` : `Full year ${year}`,
+        from: `${year}-01-01`,
+        to: row.max,
+      },
+    };
+  });
+  return { months: [...months.values()], years };
 }
 
 export async function getDashboard(db: Db, month: string, week: string) {
@@ -92,12 +106,13 @@ export async function getDashboard(db: Db, month: string, week: string) {
   });
 
   const partial = !ytdYear && week !== "all" && isPartialWeek(week, current.totals.minDate, current.totals.maxDate);
+  const yearLabel = ytdYear ? await ytdLabel(db, ytdYear) : "";
 
   return {
     month,
     week,
-    monthLabel: ytdYear ? `Year to date ${ytdYear}` : formatMonth(month),
-    periodLabel: ytdYear ? `Year to date ${ytdYear}` : week === "all" ? formatMonth(month) : formatWeek(week),
+    monthLabel: ytdYear ? yearLabel : formatMonth(month),
+    periodLabel: ytdYear ? yearLabel : week === "all" ? formatMonth(month) : formatWeek(week),
     view: ytdYear ? "ytd" : week === "all" ? "monthly" : "weekly",
     partial,
     comparisonLabel: comparison.label,
@@ -134,14 +149,29 @@ export async function getTrend(db: Db, month: string, week: string) {
     ])
     .toArray();
   const all = weeks.map((row) => row._id).filter((value) => value);
-  if (!all.length) return { weeks: [], panels: PANELS };
+  if (!all.length) return { weeks: [], panels: PANELS, skipped: [], year: periodYear(month) };
 
-  // Year to date has no single month, so the trend ends on the newest week of all.
+  const year = periodYear(month);
+  const yearPrefix = `${year}-`;
+  const shutdowns = await shutdownMap(db);
+
+  // Year to date has no single month, so the trend ends on the newest week of that year.
   const monthWeeks = ytdYearOf(month) ? [] : await db.collection("faults").distinct("weekCommencing", { month });
   const lastInMonth = [...monthWeeks].filter((value) => value).sort().pop() as string | undefined;
-  const anchor = week !== "all" && all.includes(week) ? week : lastInMonth ?? all[all.length - 1];
-  const anchorIndex = all.indexOf(anchor);
-  const picked = all.slice(Math.max(0, anchorIndex - (TREND_WEEKS - 1)), anchorIndex + 1);
+  const lastInYear = [...all].filter((value) => value.startsWith(yearPrefix)).pop();
+  const requested = week !== "all" && all.includes(week) ? week : lastInMonth ?? lastInYear ?? all[all.length - 1];
+
+  // The chart only holds weeks that commence in the selected year, so a new year starts a fresh chart.
+  // Shutdown weeks are left out. A week picked from the previous year's end is still shown when it was chosen on purpose.
+  const working = all.filter((value) => !shutdowns.has(value) && (value.startsWith(yearPrefix) || value === requested));
+  const upTo = working.filter((value) => value <= requested);
+  const picked = upTo.slice(-TREND_WEEKS);
+  const anchor = shutdowns.has(requested) ? "" : requested;
+  const skipped = picked.length
+    ? [...shutdowns.entries()]
+        .filter(([value]) => value > picked[0] && value <= requested && value.startsWith(yearPrefix))
+        .map(([value, reason]) => ({ week: value, label: formatWeek(value), reason }))
+    : [];
 
   const rows = await db
     .collection("faults")
@@ -170,6 +200,8 @@ export async function getTrend(db: Db, month: string, week: string) {
 
   return {
     panels: PANELS,
+    year,
+    skipped,
     weeks: picked.map((value) => {
       const entry = byWeek.get(value);
       return {
@@ -191,9 +223,26 @@ function isPartialWeek(week: string, minDate: string | null, maxDate: string | n
 
 const YTD = /^ytd-(\d{4})$/;
 
+// The year a period token belongs to: 2026-10 and ytd-2026 are both 2026.
+function periodYear(month: string): number {
+  return ytdYearOf(month) ?? Number(month.slice(0, 4));
+}
+
 function ytdYearOf(month: string): number | null {
   const found = YTD.exec(month);
   return found ? Number(found[1]) : null;
+}
+
+// The newest year in the data is year to date. Any earlier year is a full year.
+async function ytdLabel(db: Db, year: number): Promise<string> {
+  const [newest] = await db
+    .collection("faults")
+    .aggregate<{ max: string }>([
+      { $match: { failedDate: { $regex: /^\d{4}-\d{2}-\d{2}$/ } } },
+      { $group: { _id: null, max: { $max: "$failedDate" } } },
+    ])
+    .toArray();
+  return Number(newest?.max?.slice(0, 4)) === year ? `Year to date ${year}` : `Full year ${year}`;
 }
 
 // The same calendar days of the year before, so a year to date total is compared like for like.

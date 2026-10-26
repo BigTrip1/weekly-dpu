@@ -16,7 +16,7 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
     proxy: {
-      "/api": "http://127.0.0.1:4213",
+      "/api": `http://127.0.0.1:${process.env.DPU_API_PORT ?? 4213}`,
     },
   },
 });

@@ -1,6 +1,7 @@
 import type { Db, Document, Filter } from "mongodb";
 import { addDays } from "./dates.js";
 import { loadRules } from "./reporting.js";
+import { shutdownMap } from "./shutdowns.js";
 import { PANELS } from "./types.js";
 
 // Read-only aggregations for the Analytics page. Nothing here writes to the database.
@@ -380,8 +381,12 @@ export async function getExplore(
     ])
     .toArray();
 
+  // Weekly series leave out the production shutdown weeks, which would drag the line to zero.
+  const shutdowns = by === "week" ? await shutdownMap(db) : new Map<string, string>();
+
   const mapped = rows
     .filter((row) => row._id !== null && row._id !== undefined && row._id !== "")
+    .filter((row) => !shutdowns.has(String(row._id)))
     .map((row) => {
       const label = by === "weekday" ? WEEKDAYS[Number(row._id)] : String(row._id);
       const faultsPerBuild = row.builds ? row.faults / row.builds : 0;

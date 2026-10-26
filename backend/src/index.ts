@@ -23,6 +23,7 @@ import {
 import { getDashboard, getDrilldown, getPeriods, getTrend, loadRecords } from "./dashboard.js";
 import { importRows } from "./importFaults.js";
 import { parseWorkbook } from "./parseWorkbook.js";
+import { addShutdown, listShutdowns, removeShutdown, seedShutdowns } from "./shutdowns.js";
 import { bumpRuleVersion, rederiveAll } from "./reporting.js";
 import { extendedMappings, seedMappings, seedRules } from "./seedData.js";
 import { splitList } from "./text.js";
@@ -415,6 +416,27 @@ app.delete("/api/rules/:id", wrap(async (req, res) => {
   res.json({ updated, ruleVersion: version });
 }));
 
+// Weeks left out of the trend charts because production was shut.
+app.get("/api/shutdown-weeks", wrap(async (_req, res) => {
+  res.json({ weeks: await listShutdowns(await getDb()) });
+}));
+
+app.post("/api/shutdown-weeks", wrap(async (req, res) => {
+  const date = String(req.body?.date ?? "");
+  const reason = String(req.body?.reason ?? "");
+  try {
+    res.status(201).json(await addShutdown(await getDb(), date, reason));
+  } catch (error) {
+    throw new HttpError(400, error instanceof Error ? error.message : "Could not add the shutdown week.");
+  }
+}));
+
+app.delete("/api/shutdown-weeks/:week", wrap(async (req, res) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.week)) throw new HttpError(400, "Unknown shutdown week.");
+  if (!(await removeShutdown(await getDb(), req.params.week))) throw new HttpError(404, "Shutdown week not found.");
+  res.json({ ok: true });
+}));
+
 app.get("/api/audits/:kind", wrap(async (req, res) => {
   const kind = req.params.kind;
   const collections: Record<string, string> = {
@@ -509,6 +531,7 @@ async function ensureSetup(): Promise<void> {
   await db.collection("duplicate_audits").createIndex({ importBatchId: 1 });
   await db.collection("operational_reviews").createIndex({ importBatchId: 1 });
   await db.collection("department_mappings").createIndex({ failedToKey: 1, defectTypeContains: 1 });
+  await seedShutdowns(db);
 
   const settings = await db.collection("settings").findOne({ _id: "app" as unknown as ObjectId });
   if (!settings) {
