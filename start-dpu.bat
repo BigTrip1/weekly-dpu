@@ -20,5 +20,10 @@ start "DPU Web" /D "%~dp0frontend" cmd /k "npx vite --host --port 3124 --strictP
 echo API  http://127.0.0.1:4213
 echo Page http://127.0.0.1:3124
 powershell -NoProfile -Command "Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' } | ForEach-Object { Write-Host ('Network page http://' + $_.IPAddress + ':3124') }"
+netsh advfirewall firewall show rule name="DPU web 3124" >nul 2>&1
+if errorlevel 1 (
+  echo.
+  echo Other PCs may be blocked by Windows Firewall. Run allow-network.bat once on this PC to let the local network in.
+)
 echo The API window shows who started it, each request, and each upload.
 endlocal
