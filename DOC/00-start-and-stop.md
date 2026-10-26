@@ -31,8 +31,10 @@ Open a second terminal in the project folder.
 
 ```bat
 cd frontend
-npx vite --host --port 3124
+npm run dev
 ```
+
+For production, run `npm run build` and then `npm start` in `frontend`, and `npm start` in `backend`.
 
 Wait until it prints the Local and Network URLs. Open http://127.0.0.1:3124 on this PC. People on the same network open the Network URL, for example http://192.168.1.20:3124. Windows may ask to allow Node.js through the firewall the first time. Allow it on private networks.
 
@@ -57,10 +59,14 @@ Double-click `start-dpu.bat` in the project folder, or run it from a terminal:
 start-dpu.bat
 ```
 
-The script checks that `node` exists and that port 27017 accepts a connection. It then opens two windows:
+It asks whether to start in Dev or Production. Press D or P. To skip the question, double-click `start-dpu-dev.bat` or `start-dpu-prod.bat`, or run `start-dpu.bat dev` or `start-dpu.bat prod`.
 
-- **DPU API** compiles `backend` and runs `node dist/index.js`.
-- **DPU Web** runs Vite from `frontend` on port 3124.
+| Mode | Page window runs | API window runs | Use it for |
+| --- | --- | --- | --- |
+| Dev | `npm run dev` in `frontend` (Vite with live reload) | `npm run dev` in `backend` | Editing the code |
+| Production | `npm run build` first, then `npm start` in `frontend` (serves the built files from `frontend/dist`) | `npm start` in `backend` | Sharing the page with others. If the build fails nothing is started |
+
+Both modes use port 3124 for the page and 4213 for the API, so stop one before starting the other. The script checks that `node` exists and that port 27017 accepts a connection. It then opens the two windows. Production does not reload on code changes. Run the script again after a `git pull`.
 
 It does not start MongoDB and it does not use Docker.
 
