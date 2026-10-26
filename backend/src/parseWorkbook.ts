@@ -1,3 +1,6 @@
+import { promises as fsp } from "node:fs";
+import path from "node:path";
+import { Readable } from "node:stream";
 import ExcelJS from "exceljs";
 import { closureStatus, excelSerialToISO, formatHMS, fractionToTime, localDateISO } from "./dates.js";
 import { eventFingerprint, rowFingerprint } from "./hash.js";
@@ -86,6 +89,35 @@ function asText(value: ExcelJS.CellValue): string {
   return canonText(String(raw));
 }
 
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+function isoParts(year: number, month: number, day: number): string {
+  if (year < 1901 || month < 1 || month > 12 || day < 1) return "";
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return "";
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Dates as they appear in a CSV: Excel serial text, day first 14/10/2026, or 14-Oct-2026. */
+function dateFromText(text: string): string {
+  if (/^\d+(\.\d+)?$/.test(text)) {
+    const serial = Number(text);
+    return serial > 20000 && serial < 80000 ? excelSerialToISO(Math.floor(serial)) : "";
+  }
+  const numeric = text.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})(?:\D.*)?$/);
+  if (numeric) {
+    const year = numeric[3].length === 2 ? 2000 + Number(numeric[3]) : Number(numeric[3]);
+    return isoParts(year, Number(numeric[2]), Number(numeric[1]));
+  }
+  const named = text.match(/^(\d{1,2})[\s-]([A-Za-z]{3})[A-Za-z]*[\s,-]+(\d{2}|\d{4})(?:\D.*)?$/);
+  if (named) {
+    const month = MONTHS.indexOf(named[2].toLowerCase()) + 1;
+    const year = named[3].length === 2 ? 2000 + Number(named[3]) : Number(named[3]);
+    return month ? isoParts(year, month, Number(named[1])) : "";
+  }
+  return "";
+}
+
 export function parseDateValue(value: ExcelJS.CellValue): { iso: string; raw: string; valid: boolean } {
   const rawValue = unwrap(value);
   if (rawValue == null || rawValue === "") return { iso: "", raw: "", valid: false };
@@ -101,6 +133,8 @@ export function parseDateValue(value: ExcelJS.CellValue): { iso: string; raw: st
   const text = canonText(String(rawValue));
   const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (matched) return { iso: `${matched[1]}-${matched[2]}-${matched[3]}`, raw: text, valid: true };
+  const fromText = dateFromText(text);
+  if (fromText) return { iso: fromText, raw: text, valid: true };
   return { iso: "", raw: text, valid: false };
 }
 
@@ -110,9 +144,16 @@ export function parseTimeValue(value: ExcelJS.CellValue): string {
   if (raw instanceof Date && !Number.isNaN(raw.getTime())) return formatHMS(raw);
   if (typeof raw === "number" && Number.isFinite(raw)) return fractionToTime(raw);
   const text = String(raw).trim();
-  const matched = text.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (/^\d*\.\d+$/.test(text) && Number(text) < 1) return fractionToTime(Number(text));
+  const matched = text.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?/);
   if (!matched) return "";
-  const hh = matched[1].padStart(2, "0");
+  let hour = Number(matched[1]);
+  if (matched[4]) {
+    const pm = matched[4].toLowerCase() === "pm";
+    if (pm && hour < 12) hour += 12;
+    if (!pm && hour === 12) hour = 0;
+  }
+  const hh = String(hour).padStart(2, "0");
   const mm = matched[2].padStart(2, "0");
   const ss = (matched[3] ?? "00").padStart(2, "0");
   return `${hh}:${mm}:${ss}`;
@@ -137,12 +178,43 @@ function findHeader(sheet: ExcelJS.Worksheet): { rowNumber: number; columns: Map
   return null;
 }
 
-export async function parseWorkbook(filePath: string): Promise<ParsedRow[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
-  const sheet = workbook.worksheets[0];
-  if (!sheet) throw new Error("The workbook has no sheets.");
+function decodeCsv(buffer: Buffer): string {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    text = new TextDecoder("windows-1252").decode(buffer);
+  }
+  return text.replace(/^\uFEFF/, "");
+}
 
+function sniffDelimiter(text: string): string {
+  const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
+  const counts: Array<[string, number]> = [",", ";", "\t", "|"].map((mark) => [mark, firstLine.split(mark).length - 1]);
+  counts.sort((a, b) => b[1] - a[1]);
+  return counts[0][1] > 0 ? counts[0][0] : ",";
+}
+
+/** Reads a faults extract saved as .xlsx or .csv. Every CSV value is kept as text. */
+export async function parseWorkbook(filePath: string, originalName = filePath): Promise<ParsedRow[]> {
+  const workbook = new ExcelJS.Workbook();
+  let sheet: ExcelJS.Worksheet | undefined;
+  if (path.extname(originalName).toLowerCase() === ".csv") {
+    const text = decodeCsv(await fsp.readFile(filePath));
+    if (!text.trim()) throw new Error("The CSV file is empty.");
+    sheet = await workbook.csv.read(Readable.from([text]), {
+      map: (value: string) => (value === "" ? null : value),
+      parserOptions: { delimiter: sniffDelimiter(text) },
+    });
+  } else {
+    await workbook.xlsx.readFile(filePath);
+    sheet = workbook.worksheets[0];
+  }
+  if (!sheet) throw new Error("The file has no sheet or rows.");
+  return parseSheet(sheet);
+}
+
+function parseSheet(sheet: ExcelJS.Worksheet): ParsedRow[] {
   const header = findHeader(sheet);
   if (!header) {
     throw new Error("Could not find the faults header row. Expected the 17 source columns, including order number and failed date.");
@@ -150,7 +222,7 @@ export async function parseWorkbook(filePath: string): Promise<ParsedRow[]> {
 
   const missing = HEADER_KEYS.filter((key) => !header.columns.has(key));
   if (missing.length) {
-    throw new Error(`The workbook is missing columns: ${missing.join(", ")}. Fixed date may be headed faxed_date.`);
+    throw new Error(`The file is missing columns: ${missing.join(", ")}. Fixed date may be headed faxed_date.`);
   }
 
   const rows: ParsedRow[] = [];
@@ -234,7 +306,7 @@ export async function parseWorkbook(filePath: string): Promise<ParsedRow[]> {
     });
   }
 
-  if (!rows.length) throw new Error("The workbook has a header but no fault rows.");
+  if (!rows.length) throw new Error("The file has a header but no fault rows.");
   return rows;
 }
 

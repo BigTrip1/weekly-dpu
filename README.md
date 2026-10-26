@@ -18,7 +18,7 @@ The page is a JCB themed dashboard. It opens in dark mode, and the sun and moon 
 
 ## What you can do
 
-- Upload the weekly faults workbook from the Upload page.
+- Upload the weekly faults extract from the Upload page, as an `.xlsx` workbook or a `.csv` file with the same 17 columns.
 - Read the six panels for a month, a single week, every week in the month, or the year to date (the Year to date button beside the Week filter).
 - Open a fault count and see the original comment beside the cleansed name, plus who recorded it.
 - Open Analytics to look at the same faults from other angles: patterns in the recorded fields, the cleansed faults, and a pick-a-chart explorer. See the Analytics section below.
@@ -62,7 +62,7 @@ Failed Date is column L, `failed_date`. The month is `YYYY-MM` from that date. T
 
 ```mermaid
 flowchart TD
-  upload["Weekly xlsx upload"] --> stored["Faults in MongoDB weekly_dpu"]
+  upload["Weekly xlsx or csv upload"] --> stored["Faults in MongoDB weekly_dpu"]
   stored --> weekView["One week selected"]
   stored --> monthView["All weeks selected"]
   stored --> ytdView["Year to date selected"]
@@ -99,9 +99,9 @@ weekly dpu/
   frontend/     React page (Tailwind v4, shadcn/ui, Recharts). Vite serves it on port 3124 and proxies /api to port 4213.
                 src/components/ui holds the shadcn components, src/components/reactbits the React Bits ones,
                 src/theme.tsx the dark and light switch.
-  backend/      Express API on port 4213. Parses workbooks and reads MongoDB.
+  backend/      Express API on port 4213. Parses the .csv and .xlsx faults extracts and reads MongoDB.
                 src/analytics.ts holds the read-only Analytics aggregations.
-  samples/      Mock workbook for an upload test.
+  samples/      Mock faults extract as .csv and .xlsx for an upload test.
   DOC/          Setup guide, start and stop, upload, mapping, and column notes.
   start-dpu.bat Opens the API window and the page window.
   stop-dpu.bat  Stops those two processes. Leaves MongoDB running.

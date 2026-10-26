@@ -1,5 +1,7 @@
 # Workbook columns
 
+The same columns apply to a `.csv` upload. See the CSV section of [02-upload-sop.md](02-upload-sop.md) for the accepted date, time and delimiter styles.
+
 Header row 1. The importer matches these names after removing spaces, underscores, and capital letters. Column O may be headed `faxed_date`. That spelling is the fix date.
 
 | Column | Header | Used for |

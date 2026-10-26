@@ -44,9 +44,9 @@ export function Upload() {
 
   function choose(next: File | null) {
     setError("");
-    if (next && !next.name.toLowerCase().endsWith(".xlsx")) {
+    if (next && !/.(xlsx|csv)$/i.test(next.name)) {
       setFile(null);
-      setError("Upload the faults extract as an .xlsx workbook.");
+      setError("Upload the faults extract as an .xlsx workbook or a .csv file.");
       return;
     }
     setFile(next);
@@ -55,7 +55,7 @@ export function Upload() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!file) {
-      setError("Choose the weekly faults workbook.");
+      setError("Choose the weekly faults file (.xlsx or .csv).");
       return;
     }
     setBusy(true);
@@ -100,7 +100,7 @@ export function Upload() {
         <div
           role="button"
           tabIndex={0}
-          aria-label="Choose the .xlsx extract"
+          aria-label="Choose the .xlsx or .csv extract"
           onClick={() => inputRef.current?.click()}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -127,7 +127,7 @@ export function Upload() {
             ref={inputRef}
             type="file"
             className="hidden"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={(event) => choose(event.target.files?.[0] ?? null)}
           />
           {file ? (
@@ -142,7 +142,7 @@ export function Upload() {
             <>
               <UploadCloudIcon className="size-10 text-primary" />
               <div>
-                <p className="font-display text-2xl font-bold tracking-wide uppercase">Drop the .xlsx extract here</p>
+                <p className="font-display text-2xl font-bold tracking-wide uppercase">Drop the .xlsx or .csv extract here</p>
                 <p className="text-sm text-muted-foreground">or click to browse. Order number through fix, with failed date as the reporting date.</p>
               </div>
             </>
@@ -151,7 +151,7 @@ export function Upload() {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="lg" disabled={busy || !file}>
             {busy ? <Loader2Icon className="animate-spin" /> : <UploadCloudIcon />}
-            {busy ? "Importing…" : "Import workbook"}
+            {busy ? "Importing…" : "Import file"}
           </Button>
           {file && !busy && (
             <Button
@@ -165,7 +165,7 @@ export function Upload() {
               <XIcon /> Clear file
             </Button>
           )}
-          {busy && <span className="text-sm text-muted-foreground">Reading the workbook, checking duplicates, and cleansing faults. Large files take a little while.</span>}
+          {busy && <span className="text-sm text-muted-foreground">Reading the file, checking duplicates, and cleansing faults. Large files take a little while.</span>}
         </div>
       </form>
 

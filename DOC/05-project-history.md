@@ -30,6 +30,8 @@ Comment rules group different sentences for the same fault. They were extended w
 
 ## Dashboard
 
+The Upload page also accepts a `.csv` of the same raw faults extract. The importer reads it as text, detects the delimiter and encoding, and normalises dates and times to the same stored values as the workbook.
+
 A year to date view was added to the Dashboard: a Year to date button beside the Week filter selects 1 January to the newest fault, compared with the same dates a year earlier (period value `ytd-YYYY` in the API). The nav bar now shows the official JCB logo image in place of the text badge.
 
 A selected week is compared with the previous calendar week. All weeks compares the selected month with the previous calendar month. The sample extract is mostly October 2026, with only a small number of September faults, so an October monthly view shows large increases.

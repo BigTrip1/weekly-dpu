@@ -200,13 +200,13 @@ app.get("/api/imports", wrap(async (_req, res) => {
 
 app.post("/api/imports", upload.single("file"), wrap(async (req, res) => {
   const file = req.file;
-  if (!file) throw new HttpError(400, "Choose an .xlsx faults extract.");
-  if (!file.originalname.toLowerCase().endsWith(".xlsx")) {
+  if (!file) throw new HttpError(400, "Choose an .xlsx or .csv faults extract.");
+  if (!/\.(xlsx|csv)$/i.test(file.originalname)) {
     await fs.unlink(file.path).catch(() => undefined);
-    throw new HttpError(400, "Upload the faults extract as an .xlsx workbook.");
+    throw new HttpError(400, "Upload the faults extract as an .xlsx workbook or a .csv file.");
   }
   try {
-    const rows = await parseWorkbook(file.path);
+    const rows = await parseWorkbook(file.path, file.originalname);
     const summary = await importRows(await getDb(), file.originalname, rows);
     console.log(
       `Upload ${summary.filename}: inserted ${summary.inserted}, exact duplicates skipped ${summary.exactDuplicatesSkipped}, closure refreshed ${summary.closureRefreshed}, excluded ${summary.excluded}, operational reviews ${summary.operationalReviews}`,
