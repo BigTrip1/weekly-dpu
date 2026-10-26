@@ -4,8 +4,8 @@ The review is two programs, plus MongoDB.
 
 | Piece | Folder | Address | What you see |
 | --- | --- | --- | --- |
-| API | `backend` | http://127.0.0.1:4000 | Requests and upload summaries |
-| Web page | `frontend` | http://127.0.0.1:5173 | The dashboard |
+| API | `backend` | http://127.0.0.1:4213 | Requests and upload summaries |
+| Web page | `frontend` | http://127.0.0.1:3124 | The dashboard |
 | MongoDB | installed separately | 127.0.0.1:27017 | Not started by these steps |
 
 Leave the API window and the page window open while you use the review. Closing a window stops that half.
@@ -25,16 +25,16 @@ cd backend
 npx tsc && node dist/index.js
 ```
 
-Wait until it prints `DPU API listening on http://127.0.0.1:4000`. The lines above that name the Windows account and the PC.
+Wait until it prints `DPU API listening on http://127.0.0.1:4213`. The lines above that name the Windows account and the PC.
 
 Open a second terminal in the project folder.
 
 ```bat
 cd frontend
-npx vite --host 127.0.0.1 --port 5173
+npx vite --host 127.0.0.1 --port 3124
 ```
 
-Wait until it prints a local URL. Open http://127.0.0.1:5173.
+Wait until it prints a local URL. Open http://127.0.0.1:3124.
 
 From the project folder, the same two commands are:
 
@@ -56,7 +56,7 @@ start-dpu.bat
 The script checks that `node` exists and that port 27017 accepts a connection. It then opens two windows:
 
 - **DPU API** compiles `backend` and runs `node dist/index.js`.
-- **DPU Web** runs Vite from `frontend` on port 5173.
+- **DPU Web** runs Vite from `frontend` on port 3124.
 
 It does not start MongoDB and it does not use Docker.
 
@@ -68,7 +68,7 @@ Close the two windows, or double-click `stop-dpu.bat`.
 stop-dpu.bat
 ```
 
-That stops whatever is listening on ports 4000 and 5173. MongoDB keeps running.
+That stops whatever is listening on ports 4213 and 3124. MongoDB keeps running.
 
 ## What the API window shows
 

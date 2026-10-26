@@ -96,10 +96,10 @@ Selecting any chart mark opens the records behind it in the same side sheet as t
 
 ```text
 weekly dpu/
-  frontend/     React page (Tailwind v4, shadcn/ui, Recharts). Vite serves it on port 5173 and proxies /api to port 4000.
+  frontend/     React page (Tailwind v4, shadcn/ui, Recharts). Vite serves it on port 3124 and proxies /api to port 4213.
                 src/components/ui holds the shadcn components, src/components/reactbits the React Bits ones,
                 src/theme.tsx the dark and light switch.
-  backend/      Express API on port 4000. Parses workbooks and reads MongoDB.
+  backend/      Express API on port 4213. Parses workbooks and reads MongoDB.
                 src/analytics.ts holds the read-only Analytics aggregations.
   samples/      Mock workbook for an upload test.
   DOC/          Setup guide, start and stop, upload, mapping, and column notes.
@@ -113,7 +113,7 @@ MongoDB is a separate program. This app expects it on `mongodb://127.0.0.1:27017
 
 MongoDB must already be listening on port 27017.
 
-From the project folder, double-click `start-dpu.bat`, or follow [DOC/00-start-and-stop.md](DOC/00-start-and-stop.md) and start the two processes by hand. Then open http://127.0.0.1:5173.
+From the project folder, double-click `start-dpu.bat`, or follow [DOC/00-start-and-stop.md](DOC/00-start-and-stop.md) and start the two processes by hand. Then open http://127.0.0.1:3124.
 
 The API window prints the Windows account that started it, the PC name, each request, and a one-line summary after every upload. There is no login, so that window cannot show a signed-in user.
 

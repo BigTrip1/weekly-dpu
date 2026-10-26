@@ -15,9 +15,9 @@ if errorlevel 1 (
 )
 
 start "DPU API" /D "%~dp0backend" cmd /k "npx tsc && node dist/index.js"
-start "DPU Web" /D "%~dp0frontend" cmd /k "npx vite --host 127.0.0.1 --port 5173"
+start "DPU Web" /D "%~dp0frontend" cmd /k "npx vite --host 127.0.0.1 --port 3124 --strictPort"
 
-echo API  http://127.0.0.1:4000
-echo Page http://127.0.0.1:5173
+echo API  http://127.0.0.1:4213
+echo Page http://127.0.0.1:3124
 echo The API window shows who started it, each request, and each upload.
 endlocal

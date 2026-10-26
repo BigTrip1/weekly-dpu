@@ -30,7 +30,7 @@ If `npm install --prefix backend` and `npm install --prefix frontend` succeed on
 
 1. Start MongoDB and confirm port 27017 is open.
 2. Follow [00-start-and-stop.md](00-start-and-stop.md).
-3. Open http://127.0.0.1:5173.
+3. Open http://127.0.0.1:3124.
 4. On a brand-new database the API seeds the comment rules and the known department map the first time it connects.
 
 ## Ports
@@ -38,13 +38,13 @@ If `npm install --prefix backend` and `npm install --prefix frontend` succeed on
 | Port | Program |
 | --- | --- |
 | 27017 | MongoDB |
-| 4000 | API |
-| 5173 | Web page. Calls to `/api` are forwarded to port 4000 |
+| 4213 | API |
+| 3124 | Web page. Calls to `/api` are forwarded to port 4213 |
 
 The page is only bound to `127.0.0.1` when started by the bat file or the manual Vite command in the start guide. It is not exposed on the network by those commands.
 
 ## Files worth knowing
 
-- `backend/.env` is not required. `MONGO_URL` and `MONGO_DB` override the defaults if you set them in the environment. `PORT` overrides 4000.
+- `backend/.env` is not required. `MONGO_URL` and `MONGO_DB` override the defaults if you set them in the environment. `PORT` overrides 4213.
 - Uploaded workbooks are parsed from a temporary file and then deleted. They are not kept in `backend/uploads`.
 - `samples/mock-faults-jan-2026-to-date.xlsx` is a fictional extract for an upload test. Read [02-upload-sop.md](02-upload-sop.md) before loading it into a database that already holds real faults.
