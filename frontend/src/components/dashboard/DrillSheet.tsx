@@ -8,12 +8,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatInt } from "@/format";
-import { departmentColor } from "@/lib/departments";
 
 type Props = {
   open: boolean;
-  department: string;
-  fault: string;
+  /** Small label above the title, such as a department or a filter summary. */
+  eyebrow: string;
+  /** Colour of the swatch beside the eyebrow. Leave out for a neutral swatch. */
+  color?: string;
+  title: string;
   periodLabel: string;
   rows: DrillRow[] | null;
   total: number;
@@ -27,7 +29,7 @@ function haystack(row: DrillRow): string {
     .toLowerCase();
 }
 
-export function DrillSheet({ open, department, fault, periodLabel, rows, total, loading, onClose }: Props) {
+export function DrillSheet({ open, eyebrow, color, title, periodLabel, rows, total, loading, onClose }: Props) {
   const [query, setQuery] = useState("");
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -48,10 +50,10 @@ export function DrillSheet({ open, department, fault, periodLabel, rows, total, 
       <SheetContent aria-label="Fault drill-down">
         <SheetHeader>
           <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-muted-foreground uppercase">
-            <span className="size-2.5 rounded-[3px]" style={{ backgroundColor: departmentColor(department) }} aria-hidden="true" />
-            {department}
+            <span className="size-2.5 rounded-[3px]" style={{ backgroundColor: color ?? "var(--muted-foreground)" }} aria-hidden="true" />
+            {eyebrow}
           </div>
-          <SheetTitle>{fault || `All ${department} faults`}</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
             {formatInt(total)} source {total === 1 ? "record" : "records"} for {periodLabel}. The original comment sits beside the cleansed category.
             {rows && rows.length < total && ` Showing the first ${formatInt(rows.length)}.`}

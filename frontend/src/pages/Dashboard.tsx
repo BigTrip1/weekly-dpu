@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowDownIcon, ArrowUpIcon, CalendarDaysIcon, MinusIcon, TriangleAlertIcon, UploadIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, CalendarDaysIcon, CalendarRangeIcon, MinusIcon, TriangleAlertIcon, UploadIcon } from "lucide-react";
 
 import {
   getDashboard,
@@ -11,6 +11,7 @@ import {
   type DrillRow,
   type MonthOption,
   type TrendResponse,
+  type YtdOption,
 } from "@/api";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { DepartmentPanel } from "@/components/dashboard/DepartmentPanel";
@@ -22,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { departmentColor } from "@/lib/departments";
 
 function deltaBadge(current: number, previous: number | null | undefined, percent: boolean) {
   if (previous == null) return <Badge variant="flat">No comparison</Badge>;
@@ -45,6 +47,7 @@ function deltaBadge(current: number, previous: number | null | undefined, percen
 export function Dashboard() {
   const [params, setParams] = useSearchParams();
   const [months, setMonths] = useState<MonthOption[]>([]);
+  const [ytd, setYtd] = useState<YtdOption | null>(null);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [trend, setTrend] = useState<TrendResponse | null>(null);
   const [trendLoading, setTrendLoading] = useState(false);
@@ -68,10 +71,13 @@ export function Dashboard() {
       .then((result) => {
         if (!active) return;
         setMonths(result.months);
+        setYtd(result.ytd);
         if (!result.months.length) {
           setLoading(false);
           return;
         }
+        // A year to date link keeps its period when the year is still in the data.
+        if (result.ytd && month === result.ytd.value && week === "all") return;
         const requested = result.months.find((item) => item.month === month) ?? result.months[result.months.length - 1];
         const weekIsKnown = week === "all" || requested.weeks.some((item) => item.week === week);
         if (month && week && weekIsKnown && requested.month === month) return;
@@ -220,7 +226,18 @@ export function Dashboard() {
     );
   }
 
-  const weekly = dashboard?.view !== "monthly";
+  const isYtd = month.startsWith("ytd-");
+  const view = dashboard?.view ?? "weekly";
+  const viewName = view === "ytd" ? "Year to date view" : view === "monthly" ? "Monthly view" : "Weekly view";
+  const previousLabel = view === "ytd" ? "Prev year QTY" : view === "monthly" ? "Prev month QTY" : "Prev week QTY";
+
+  // Back from year to date to the busiest week of the newest month.
+  function leaveYtd() {
+    const latest = months[months.length - 1];
+    if (!latest) return;
+    const busiest = latest.weeks.reduce((best, item) => (item.faults > best.faults ? item : best), latest.weeks[0]);
+    updatePeriod(latest.month, busiest.week);
+  }
 
   return (
     <main className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6">
@@ -231,7 +248,7 @@ export function Dashboard() {
         <div className="flex min-w-[12rem] items-center gap-2.5">
           <label className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">Month</label>
           <Select
-            value={month || undefined}
+            value={isYtd ? undefined : month || undefined}
             onValueChange={(nextMonth) => {
               const option = months.find((item) => item.month === nextMonth);
               const busiest = option?.weeks.reduce((best, item) => (item.faults > best.faults ? item : best), option.weeks[0]);
@@ -239,7 +256,7 @@ export function Dashboard() {
             }}
           >
             <SelectTrigger aria-label="Month">
-              <SelectValue placeholder="Choose a month" />
+              <SelectValue placeholder={isYtd ? "Not used for year to date" : "Choose a month"} />
             </SelectTrigger>
             <SelectContent>
               {months.map((item) => (
@@ -252,7 +269,7 @@ export function Dashboard() {
         </div>
         <div className="flex min-w-[14rem] items-center gap-2.5">
           <label className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">Week</label>
-          <Select value={week || undefined} onValueChange={(nextWeek) => updatePeriod(month, nextWeek)}>
+          <Select value={isYtd ? "all" : week || undefined} onValueChange={(nextWeek) => updatePeriod(month, nextWeek)} disabled={isYtd}>
             <SelectTrigger aria-label="Week">
               <SelectValue placeholder="Choose a week" />
             </SelectTrigger>
@@ -266,9 +283,21 @@ export function Dashboard() {
             </SelectContent>
           </Select>
         </div>
+        {ytd && (
+          <Button
+            type="button"
+            size="sm"
+            variant={isYtd ? "default" : "outline"}
+            aria-pressed={isYtd}
+            onClick={() => (isYtd ? leaveYtd() : updatePeriod(ytd.value, "all"))}
+            title={`${ytd.label}: 1 Jan to ${ytd.to}`}
+          >
+            <CalendarRangeIcon /> Year to date
+          </Button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Badge variant="default" className="h-7 gap-1.5 px-2.5 text-xs tracking-wider uppercase">
-            <CalendarDaysIcon /> {dashboard ? (weekly ? "Weekly view" : "Monthly view") : "Loading"}
+            <CalendarDaysIcon /> {dashboard ? viewName : "Loading"}
           </Badge>
           {dashboard && (
             <span className="text-xs text-muted-foreground">
@@ -334,7 +363,7 @@ export function Dashboard() {
             </SpotlightCard>
             <SpotlightCard className="p-5">
               <p className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">Period status</p>
-              <p className="mt-2 font-display text-3xl leading-none font-extrabold tracking-wide uppercase">{weekly ? "Weekly view" : "Monthly view"}</p>
+              <p className="mt-2 font-display text-3xl leading-none font-extrabold tracking-wide uppercase">{viewName}</p>
               <p className="mt-3 text-sm text-muted-foreground">
                 {dashboard.periodLabel}
                 {dashboard.partial && (
@@ -358,7 +387,7 @@ export function Dashboard() {
 
           <section className="grid gap-4 xl:grid-cols-2" aria-label="Executive panels">
             {dashboard.panels.map((panel) => (
-              <DepartmentPanel key={panel.department} panel={panel} periodTotal={dashboard.totals.faults} weekly={weekly} onOpen={openDrill} />
+              <DepartmentPanel key={panel.department} panel={panel} periodTotal={dashboard.totals.faults} previousLabel={previousLabel} onOpen={openDrill} />
             ))}
           </section>
 
@@ -370,8 +399,9 @@ export function Dashboard() {
 
       <DrillSheet
         open={Boolean(drillDept)}
-        department={drillDept}
-        fault={drillFault}
+        eyebrow={drillDept}
+        color={departmentColor(drillDept)}
+        title={drillFault || `All ${drillDept} faults`}
         periodLabel={drillWeek ? drillWeekLabel || drillWeek : dashboard?.periodLabel ?? ""}
         rows={drillRows}
         total={drillTotal}

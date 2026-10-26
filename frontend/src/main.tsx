@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Shell } from "./Shell";
 import { ThemeProvider } from "./theme";
+import { Analytics } from "./pages/Analytics";
 import { Audits } from "./pages/Audits";
 import { Dashboard } from "./pages/Dashboard";
 import { Mappings } from "./pages/Mappings";
@@ -17,6 +18,7 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route element={<Shell />}>
             <Route index element={<Dashboard />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="upload" element={<Upload />} />
             <Route path="mappings" element={<Mappings />} />
             <Route path="rules" element={<Rules />} />

@@ -22,12 +22,27 @@ export async function getPeriods(db: Db) {
     entry.weeks.push({ week, label: formatWeek(week), faults: row.faults });
     months.set(month, entry);
   }
-  return { months: [...months.values()] };
+  const [bounds] = await db
+    .collection("faults")
+    .aggregate<{ min: string; max: string; faults: number }>([
+      { $match: { failedDate: { $regex: /^\d{4}-\d{2}-\d{2}$/ } } },
+      { $group: { _id: null, min: { $min: "$failedDate" }, max: { $max: "$failedDate" } } },
+    ])
+    .toArray();
+
+  // Year to date covers the year of the newest fault, from 1 January to that fault.
+  let ytd: { value: string; year: number; label: string; from: string; to: string } | null = null;
+  if (bounds?.max) {
+    const year = Number(bounds.max.slice(0, 4));
+    ytd = { value: `ytd-${year}`, year, label: `Year to date ${year}`, from: `${year}-01-01`, to: bounds.max };
+  }
+  return { months: [...months.values()], ytd };
 }
 
 export async function getDashboard(db: Db, month: string, week: string) {
   const currentMatch = matchFor(month, week);
-  const comparison = comparisonFor(month, week);
+  const ytdYear = ytdYearOf(month);
+  const comparison = ytdYear ? await ytdComparison(db, ytdYear) : comparisonFor(month, week);
   const [current, previous] = await Promise.all([
     loadPeriod(db, currentMatch),
     loadPeriod(db, comparison.match),
@@ -76,14 +91,14 @@ export async function getDashboard(db: Db, month: string, week: string) {
     };
   });
 
-  const partial = week !== "all" && isPartialWeek(week, current.totals.minDate, current.totals.maxDate);
+  const partial = !ytdYear && week !== "all" && isPartialWeek(week, current.totals.minDate, current.totals.maxDate);
 
   return {
     month,
     week,
-    monthLabel: formatMonth(month),
-    periodLabel: week === "all" ? formatMonth(month) : formatWeek(week),
-    view: week === "all" ? "monthly" : "weekly",
+    monthLabel: ytdYear ? `Year to date ${ytdYear}` : formatMonth(month),
+    periodLabel: ytdYear ? `Year to date ${ytdYear}` : week === "all" ? formatMonth(month) : formatWeek(week),
+    view: ytdYear ? "ytd" : week === "all" ? "monthly" : "weekly",
     partial,
     comparisonLabel: comparison.label,
     comparisonAvailable: comparable,
@@ -121,7 +136,8 @@ export async function getTrend(db: Db, month: string, week: string) {
   const all = weeks.map((row) => row._id).filter((value) => value);
   if (!all.length) return { weeks: [], panels: PANELS };
 
-  const monthWeeks = await db.collection("faults").distinct("weekCommencing", { month });
+  // Year to date has no single month, so the trend ends on the newest week of all.
+  const monthWeeks = ytdYearOf(month) ? [] : await db.collection("faults").distinct("weekCommencing", { month });
   const lastInMonth = [...monthWeeks].filter((value) => value).sort().pop() as string | undefined;
   const anchor = week !== "all" && all.includes(week) ? week : lastInMonth ?? all[all.length - 1];
   const anchorIndex = all.indexOf(anchor);
@@ -173,7 +189,32 @@ function isPartialWeek(week: string, minDate: string | null, maxDate: string | n
   return minDate > week || maxDate < weekEnd(week);
 }
 
+const YTD = /^ytd-(\d{4})$/;
+
+function ytdYearOf(month: string): number | null {
+  const found = YTD.exec(month);
+  return found ? Number(found[1]) : null;
+}
+
+// The same calendar days of the year before, so a year to date total is compared like for like.
+async function ytdComparison(db: Db, year: number): Promise<{ match: PeriodMatch; label: string }> {
+  const [latest] = await db
+    .collection("faults")
+    .aggregate<{ max: string }>([
+      { $match: { failedDate: { $gte: `${year}-01-01`, $lt: `${year + 1}-01-01` } } },
+      { $group: { _id: null, max: { $max: "$failedDate" } } },
+    ])
+    .toArray();
+  const monthDay = (latest?.max ?? `${year}-12-31`).slice(5);
+  return {
+    match: { failedDate: { $gte: `${year - 1}-01-01`, $lte: `${year - 1}-${monthDay}` } },
+    label: `Same period ${year - 1}`,
+  };
+}
+
 function matchFor(month: string, week: string): PeriodMatch {
+  const ytdYear = ytdYearOf(month);
+  if (ytdYear) return { failedDate: { $gte: `${ytdYear}-01-01`, $lt: `${ytdYear + 1}-01-01` } };
   if (week === "all") return { month };
   return { month, weekCommencing: week };
 }
@@ -263,6 +304,11 @@ export async function getDrilldown(
     executiveDepartment: department,
     ...(cleansedFault ? { cleansedFault } : {}),
   };
+  return loadRecords(db, filter);
+}
+
+// Source rows behind a count. Shared by the dashboard drill-down and the Analytics page.
+export async function loadRecords(db: Db, filter: Filter<Record<string, unknown>>) {
   const total = await db.collection("faults").countDocuments(filter);
   const rows = await db
     .collection("faults")

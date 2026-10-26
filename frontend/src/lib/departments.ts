@@ -8,7 +8,13 @@ export const DEPARTMENTS = [
   "Supplier Quality",
 ] as const;
 
+export const OFF_PANEL = "Off panel";
+
 export function departmentColor(name: string): string {
+  if (name === OFF_PANEL) {
+    // Dimmer than the Supplier Quality grey, so hidden and unmapped faults read as a separate group.
+    return "color-mix(in oklab, var(--muted-foreground) 40%, transparent)";
+  }
   const index = DEPARTMENTS.indexOf(name as (typeof DEPARTMENTS)[number]);
   return `var(--dept-${index >= 0 ? index + 1 : 6})`;
 }

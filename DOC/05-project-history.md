@@ -30,6 +30,8 @@ Comment rules group different sentences for the same fault. They were extended w
 
 ## Dashboard
 
+A year to date view was added to the Dashboard: a Year to date button beside the Week filter selects 1 January to the newest fault, compared with the same dates a year earlier (period value `ytd-YYYY` in the API). The nav bar now shows the official JCB logo image in place of the text badge.
+
 A selected week is compared with the previous calendar week. All weeks compares the selected month with the previous calendar month. The sample extract is mostly October 2026, with only a small number of September faults, so an October monthly view shows large increases.
 
 Clicking a count opens the source rows. The drill-down includes the original comment and the person in `failed_by`, labelled Recorded by. Departments has its own drill-down for each Failed To value.
@@ -47,3 +49,13 @@ The first version used hand-written styles on a paper background. It was rebuilt
 - Chart marks open records: a bar, slice or legend name opens every fault on that panel for the period, and a weekly trend point opens that department for that week. `GET /api/faults` accepts a missing cleansed fault, and a missing month when a week date is given.
 - Panel rows dropped the share bar and gained a previous period quantity column (Prev week QTY or Prev month QTY). Count is labelled QTY.
 - Counting, cleansing, comparison, and upload behaviour are unchanged.
+
+## Analytics page
+
+A third view was added for deeper reading of the same data, with three tabs under a shared filter bar (date range, department, model, work centre):
+
+- **Patterns** reads the recorded fields: machine area against defect type, hour of day, weekday, model league, defect-type mix and work-centre load.
+- **Faults** reads the processed data: Pareto of cleansed faults, 4-week fault movement, Failed To against department, and cleansing coverage.
+- **Explorer** lets the reader pick a measure and a breakdown from an allow-list.
+
+The API gained read-only routes under `/api/analytics` (meta, patterns, faults, explore, records). The default range counts back from the newest Failed Date in the data. The records sheet from the Dashboard was generalised so every chart mark can open its source rows. Recorded-by is not offered as a breakdown anywhere, so no view can rank people, and faults per build is marked low volume under 5 builds.

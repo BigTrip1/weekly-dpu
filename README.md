@@ -12,14 +12,16 @@ The page is a JCB themed dashboard. It opens in dark mode, and the sun and moon 
 
 - Built with React, Tailwind CSS v4, and shadcn/ui components, with Recharts for the charts.
 - Two React Bits components are copied in: a count-up for the headline figures and a spotlight hover on the figure cards.
+- The header carries the official JCB logo from `frontend/public/jcb-logo.png`. Replace that file to change it.
 - Fonts are bundled with the app, so no internet connection is needed at run time.
 - The dashboard has a chart row (faults by department, share of mapped faults, and the last eight weeks by department) above the six ranked panels. Selecting a bar, a donut slice, a legend name, or a point on the weekly lines opens the source records for that department. A point narrows the records to that week.
 
 ## What you can do
 
 - Upload the weekly faults workbook from the Upload page.
-- Read the six panels for a month, a single week, or every week in the month.
+- Read the six panels for a month, a single week, every week in the month, or the year to date (the Year to date button beside the Week filter).
 - Open a fault count and see the original comment beside the cleansed name, plus who recorded it.
+- Open Analytics to look at the same faults from other angles: patterns in the recorded fields, the cleansed faults, and a pick-a-chart explorer. See the Analytics section below.
 - Map a Failed To value onto an executive department, or hide it.
 - Edit the comment rules that group the same fault written in different words.
 - Review rows that were excluded, skipped as exact duplicates, or kept aside for an operational check.
@@ -28,10 +30,10 @@ The page is a JCB themed dashboard. It opens in dark mode, and the sun and moon 
 
 | Panel | Typical Failed To values |
 | --- | --- |
-| Shot & Paint | Shot & Paint, and Finishing Ldl only when the defect type contains paint |
-| Manufacturing Facilities | Chassis Manufacturing, Machining Manufacturing, Fabrication Manufacturing |
-| Parts / POF | Materials, Logistics |
-| Production | Zone 3, Zone 4, Zone 5, Zone 6, Boom Sub Assembly |
+| Shot & Paint | Shot & Paint, and Finishing Ldl when the defect type contains paint |
+| Manufacturing Facilities | Chassis, Machining and Fabrication Manufacturing, plus the other manufacturing, fabrication and Maintenance values |
+| Parts / POF | Materials, Logistics, Boom Kitting |
+| Production | The zones, the sub assemblies, and the line, test and rectification stages |
 | Cab Systems | Cab Systems |
 | Supplier Quality | Supplier Quality |
 
@@ -63,15 +65,32 @@ flowchart TD
   upload["Weekly xlsx upload"] --> stored["Faults in MongoDB weekly_dpu"]
   stored --> weekView["One week selected"]
   stored --> monthView["All weeks selected"]
+  stored --> ytdView["Year to date selected"]
   weekView --> prevWeek["Compare with the previous calendar week"]
   monthView --> prevMonth["Compare with the previous calendar month"]
+  ytdView --> prevYear["Compare with the same dates last year"]
   prevWeek --> tiles["Total faults, builds, faults per build, trend and share"]
   prevMonth --> tiles
+  prevYear --> tiles
 ```
+
+Year to date runs from 1 January of the year of the newest fault to that fault, by Failed Date. It is compared with the same calendar days of the year before. When no faults exist for those days, the trend badges show No comparison. Month and Week are not used in this view.
 
 A week that crosses a month boundary is listed under both months, but each month only counts the days whose Failed Date falls in that month. The comparison for a chosen week is the whole previous week, including days that fall in the other month.
 
-Each panel row shows the previous period quantity beside the current quantity. The column reads Prev week QTY in the weekly view and Prev month QTY in the monthly view. Share change is the department share for the period minus its share in the previous period, using every mapped fault in that department and not only the top 10. Red means the count or share went up. Green means it went down. Grey means it did not change. A dash means the previous period had no faults to compare.
+Each panel row shows the previous period quantity beside the current quantity. The column reads Prev week QTY in the weekly view, Prev month QTY in the monthly view and Prev year QTY in the year to date view. Share change is the department share for the period minus its share in the previous period, using every mapped fault in that department and not only the top 10. Red means the count or share went up. Green means it went down. Grey means it did not change. A dash means the previous period had no faults to compare.
+
+## Analytics
+
+The Analytics page sits beside the Dashboard. A filter bar at the top sets the date range (last 4 weeks, last 8 weeks, this month, all data, or custom), a department, a model and a work centre. The range counts back from the newest Failed Date in the data and not from today. The filters are in the address, so a view can be bookmarked.
+
+| Tab | What it shows |
+| --- | --- |
+| Patterns | Recorded fields as they came in: a machine area against defect type heatmap, faults by hour and weekday, a model league with faults per build, the defect-type mix and the work-centre load, each split by department. |
+| Faults | Processed data: a Pareto of the top cleansed faults, fault movement (4 weeks against the 4 before) per department, Failed To against department, and how many faults were named by a cleansing rule. |
+| Explorer | Choose a measure (faults, distinct builds, faults per build) and a breakdown (department, model, machine area, defect type, work centre, Failed To, hour, weekday, week, month). |
+
+Selecting any chart mark opens the records behind it in the same side sheet as the Dashboard. Nothing on this page ranks or names inspectors, and the recorded-by column stays inside the record sheet. Faults per build is marked low volume where a group has fewer than 5 builds.
 
 ## Repository
 
@@ -81,6 +100,7 @@ weekly dpu/
                 src/components/ui holds the shadcn components, src/components/reactbits the React Bits ones,
                 src/theme.tsx the dark and light switch.
   backend/      Express API on port 4000. Parses workbooks and reads MongoDB.
+                src/analytics.ts holds the read-only Analytics aggregations.
   samples/      Mock workbook for an upload test.
   DOC/          Setup guide, start and stop, upload, mapping, and column notes.
   start-dpu.bat Opens the API window and the page window.

@@ -16,7 +16,7 @@ export type DashboardResponse = {
   week: string;
   monthLabel: string;
   periodLabel: string;
-  view: "weekly" | "monthly";
+  view: "weekly" | "monthly" | "ytd";
   partial: boolean;
   comparisonLabel: string;
   comparisonAvailable: boolean;
@@ -118,8 +118,10 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+export type YtdOption = { value: string; year: number; label: string; from: string; to: string };
+
 export function getPeriods() {
-  return request<{ months: MonthOption[] }>("/api/periods");
+  return request<{ months: MonthOption[]; ytd: YtdOption | null }>("/api/periods");
 }
 
 export function getDashboard(month: string, week: string) {
@@ -213,4 +215,115 @@ export function getAudit(kind: "excluded" | "duplicates" | "operational", page: 
   return request<{ total: number; page: number; pageSize: number; rows: Record<string, unknown>[] }>(
     `/api/audits/${kind}?page=${page}&pageSize=50`,
   );
+}
+
+// Analytics. Every call takes the shared filters. A chart mark adds one more field when it opens records.
+export type AnalyticsFilters = {
+  from?: string;
+  to?: string;
+  department?: string;
+  model?: string;
+  workCenter?: string;
+};
+
+export type RecordQuery = Partial<
+  AnalyticsFilters & {
+    machineArea: string;
+    defectType: string;
+    failedTo: string;
+    cleansedFault: string;
+    hour: string;
+    weekday: string;
+    week: string;
+    month: string;
+  }
+>;
+
+export type AnalyticsMeta = {
+  min: string | null;
+  max: string | null;
+  total: number;
+  models: string[];
+  workCenters: string[];
+  departments: string[];
+};
+
+export type StackRow = { label: string; total: number; departments: Record<string, number> };
+
+export type PatternsResponse = {
+  totals: { faults: number; uniqueBuilds: number };
+  heatmap: { areas: string[]; defects: string[]; cells: { area: string; defect: string; count: number }[] };
+  models: { model: string; faults: number; builds: number; faultsPerBuild: number | null; lowVolume: boolean }[];
+  hours: { hour: string; count: number }[];
+  weekdays: { weekday: string; index: number; count: number }[];
+  defectMix: StackRow[];
+  workCentres: StackRow[];
+  departments: string[];
+};
+
+export type MovementStatus = "New" | "Rising" | "Falling" | "Steady";
+
+export type FaultAnalyticsResponse = {
+  totalFaults: number;
+  pareto: { fault: string; count: number; cumulativeShare: number }[];
+  faultsFor80: number;
+  distinctFaults: number;
+  coverage: {
+    totalFaults: number;
+    ruleFaults: number;
+    fallbackFaults: number;
+    distinctFaults: number;
+    topRules: { fault: string; count: number }[];
+    variants: { fault: string; faults: number; rawComments: number }[];
+  };
+  failedTo: { failedTo: string; total: number; departments: Record<string, number> }[];
+  failedToCount: number;
+  movement: {
+    recentFrom: string | null;
+    recentTo: string | null;
+    priorFrom: string | null;
+    priorTo: string | null;
+    departments: {
+      department: string;
+      rows: { fault: string; recent: number; prior: number; change: number; status: MovementStatus }[];
+    }[];
+  };
+  departments: string[];
+};
+
+export type ExploreMeasure = "faults" | "builds" | "faultsPerBuild";
+
+export type ExploreResponse = {
+  measure: ExploreMeasure;
+  by: string;
+  time: boolean;
+  rows: { key: string; label: string; faults: number; builds: number; faultsPerBuild: number; value: number; lowVolume: boolean }[];
+};
+
+function analyticsParams(filters: AnalyticsFilters, extra: Record<string, string | undefined> = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries({ ...filters, ...extra })) {
+    if (value) params.set(key, value);
+  }
+  return params;
+}
+
+export function getAnalyticsMeta() {
+  return request<AnalyticsMeta>("/api/analytics/meta");
+}
+
+export function getPatterns(filters: AnalyticsFilters) {
+  return request<PatternsResponse>(`/api/analytics/patterns?${analyticsParams(filters)}`);
+}
+
+export function getFaultAnalytics(filters: AnalyticsFilters) {
+  return request<FaultAnalyticsResponse>(`/api/analytics/faults?${analyticsParams(filters)}`);
+}
+
+export function getExplore(filters: AnalyticsFilters, measure: ExploreMeasure, by: string, limit: number) {
+  return request<ExploreResponse>(`/api/analytics/explore?${analyticsParams(filters, { measure, by, limit: String(limit) })}`);
+}
+
+export function getAnalyticsRecords(filters: AnalyticsFilters, query: RecordQuery) {
+  return request<{ total: number; rows: DrillRow[] }>(`/api/analytics/records?${analyticsParams(filters, query)}`);
 }

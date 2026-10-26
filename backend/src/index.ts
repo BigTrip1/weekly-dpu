@@ -6,7 +6,21 @@ import multer from "multer";
 import os from "node:os";
 import path from "node:path";
 import { getDb } from "./db.js";
-import { getDashboard, getDrilldown, getPeriods, getTrend } from "./dashboard.js";
+import {
+  EXPLORE_BREAKDOWNS,
+  EXPLORE_MEASURES,
+  OFF_PANEL,
+  WEEKDAYS,
+  getAnalyticsMeta,
+  getExplore,
+  getFaultAnalytics,
+  getPatterns,
+  recordsMatch,
+  type AnalyticsFilters,
+  type ExploreMeasure,
+  type RecordFilters,
+} from "./analytics.js";
+import { getDashboard, getDrilldown, getPeriods, getTrend, loadRecords } from "./dashboard.js";
 import { importRows } from "./importFaults.js";
 import { parseWorkbook } from "./parseWorkbook.js";
 import { bumpRuleVersion, rederiveAll } from "./reporting.js";
@@ -53,6 +67,9 @@ function wrap(fn: (req: Request, res: Response, next: NextFunction) => Promise<v
   };
 }
 
+// A reporting month, or a year to date such as ytd-2026.
+const PERIOD_MONTH = /^(\d{4}-\d{2}|ytd-\d{4})$/;
+
 app.get("/api/health", wrap(async (_req, res) => {
   const db = await getDb();
   await db.command({ ping: 1 });
@@ -67,7 +84,7 @@ app.get("/api/periods", wrap(async (_req, res) => {
 app.get("/api/dashboard", wrap(async (req, res) => {
   const month = String(req.query.month ?? "");
   const week = String(req.query.week ?? "all");
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, "Choose a month in YYYY-MM format.");
+  if (!PERIOD_MONTH.test(month)) throw new HttpError(400, "Choose a month in YYYY-MM format, or a year to date such as ytd-2026.");
   if (week !== "all" && !/^\d{4}-\d{2}-\d{2}$/.test(week)) throw new HttpError(400, "Choose a week commencing date or all.");
   res.json(await getDashboard(await getDb(), month, week));
 }));
@@ -75,7 +92,7 @@ app.get("/api/dashboard", wrap(async (req, res) => {
 app.get("/api/dashboard/trend", wrap(async (req, res) => {
   const month = String(req.query.month ?? "");
   const week = String(req.query.week ?? "all");
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, "Choose a month in YYYY-MM format.");
+  if (!PERIOD_MONTH.test(month)) throw new HttpError(400, "Choose a month in YYYY-MM format, or a year to date such as ytd-2026.");
   if (week !== "all" && !/^\d{4}-\d{2}-\d{2}$/.test(week)) throw new HttpError(400, "Choose a week commencing date or all.");
   res.json(await getTrend(await getDb(), month, week));
 }));
@@ -87,10 +104,78 @@ app.get("/api/faults", wrap(async (req, res) => {
   const cleansedFault = String(req.query.cleansedFault ?? "");
   const weekIsDate = /^\d{4}-\d{2}-\d{2}$/.test(week);
   // A month is optional when a single week is asked for. The weekly trend chart counts by week alone.
-  if (month ? !/^\d{4}-\d{2}$/.test(month) : !weekIsDate) throw new HttpError(400, "A month is required.");
+  if (month ? !PERIOD_MONTH.test(month) : !weekIsDate) throw new HttpError(400, "A month is required.");
   if (week !== "all" && !weekIsDate) throw new HttpError(400, "A week is required.");
   if (!isPanel(department)) throw new HttpError(400, "Choose an executive department.");
   res.json(await getDrilldown(await getDb(), month, week, department, cleansedFault));
+}));
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function text(value: unknown): string {
+  return typeof value === "string" ? value.trim().slice(0, 200) : "";
+}
+
+function analyticsFilters(req: Request): AnalyticsFilters {
+  const from = text(req.query.from);
+  const to = text(req.query.to);
+  const department = text(req.query.department);
+  if (from && !ISO_DATE.test(from)) throw new HttpError(400, "From must be a date in YYYY-MM-DD format.");
+  if (to && !ISO_DATE.test(to)) throw new HttpError(400, "To must be a date in YYYY-MM-DD format.");
+  if (department && department !== OFF_PANEL && !isPanel(department)) throw new HttpError(400, "Choose an executive department or Off panel.");
+  return {
+    from: from || undefined,
+    to: to || undefined,
+    department: department || undefined,
+    model: text(req.query.model) || undefined,
+    workCenter: text(req.query.workCenter) || undefined,
+  };
+}
+
+app.get("/api/analytics/meta", wrap(async (_req, res) => {
+  res.json(await getAnalyticsMeta(await getDb()));
+}));
+
+app.get("/api/analytics/patterns", wrap(async (req, res) => {
+  res.json(await getPatterns(await getDb(), analyticsFilters(req)));
+}));
+
+app.get("/api/analytics/faults", wrap(async (req, res) => {
+  const db = await getDb();
+  const meta = await getAnalyticsMeta(db);
+  res.json(await getFaultAnalytics(db, analyticsFilters(req), meta.max));
+}));
+
+app.get("/api/analytics/explore", wrap(async (req, res) => {
+  const measure = text(req.query.measure) || "faults";
+  const by = text(req.query.by) || "department";
+  if (!(EXPLORE_MEASURES as readonly string[]).includes(measure)) throw new HttpError(400, "Choose faults, builds or faultsPerBuild.");
+  if (!EXPLORE_BREAKDOWNS.includes(by)) throw new HttpError(400, "Choose one of: " + EXPLORE_BREAKDOWNS.join(", ") + ".");
+  const limit = Math.min(Math.max(Number(req.query.limit) || 15, 3), 60);
+  res.json(await getExplore(await getDb(), analyticsFilters(req), measure as ExploreMeasure, by, limit));
+}));
+
+app.get("/api/analytics/records", wrap(async (req, res) => {
+  const hour = text(req.query.hour);
+  const weekday = text(req.query.weekday);
+  const week = text(req.query.week);
+  const month = text(req.query.month);
+  if (hour && !/^\d{2}$/.test(hour)) throw new HttpError(400, "Hour must be two digits.");
+  if (weekday && !(WEEKDAYS as readonly string[]).includes(weekday)) throw new HttpError(400, "Weekday must be Mon to Sun.");
+  if (week && !ISO_DATE.test(week)) throw new HttpError(400, "Week must be a date in YYYY-MM-DD format.");
+  if (month && !/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, "Month must be in YYYY-MM format.");
+  const filters: RecordFilters = {
+    ...analyticsFilters(req),
+    machineArea: text(req.query.machineArea) || undefined,
+    defectType: text(req.query.defectType) || undefined,
+    failedTo: text(req.query.failedTo) || undefined,
+    cleansedFault: text(req.query.cleansedFault) || undefined,
+    hour: hour || undefined,
+    weekday: weekday || undefined,
+    week: week || undefined,
+    month: month || undefined,
+  };
+  res.json(await loadRecords(await getDb(), recordsMatch(filters)));
 }));
 
 app.get("/api/imports", wrap(async (_req, res) => {

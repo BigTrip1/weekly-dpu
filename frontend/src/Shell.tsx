@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { to: "/", label: "Dashboard", end: true },
+  { to: "/analytics", label: "Analytics" },
   { to: "/upload", label: "Upload" },
   { to: "/mappings", label: "Departments" },
   { to: "/rules", label: "Rules" },
@@ -23,12 +24,7 @@ export function Shell() {
           <div className="header-grid relative">
             <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">
-                <div
-                  aria-hidden="true"
-                  className="grid h-10 w-[60px] place-items-center rounded-[4px] bg-[#161616] font-display text-[26px] leading-none font-extrabold tracking-wider text-jcb dark:bg-jcb dark:text-[#111]"
-                >
-                  JCB
-                </div>
+                <img src="/jcb-logo.png" alt="JCB" width={128} height={50} className="h-10 w-auto shrink-0 rounded-[3px]" />
                 <div className="leading-none">
                   <p className="text-[11px] font-bold tracking-[0.2em] uppercase opacity-70">Build quality</p>
                   <h1 className="mt-1 font-display text-[26px] leading-none font-extrabold tracking-wide uppercase">Executive DPU Review</h1>

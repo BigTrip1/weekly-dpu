@@ -22,6 +22,22 @@ Header row 1. The importer matches these names after removing spaces, underscore
 | P | fixed_time | Stored with the closure. Same refresh rule as the fix date. |
 | Q | fix | The closure note. Ignored by cleansing and by department assignment. Included in the exact-row fingerprint, so a changed fix note is not treated as an exact duplicate. |
 
+## Where each column appears on the Analytics page
+
+| Chart | Columns |
+| --- | --- |
+| Machine area against defect type | machine_area (I), defect_type (J) |
+| Faults by hour of day | failed_time (M) |
+| Faults by weekday | failed_date (L) |
+| Model league, faults per build | model (D), build_number (B) |
+| Defect-type mix, work-centre load | defect_type (J), work_center (E), with the department from failed_to (H) |
+| Fault Pareto, fault movement | The cleansed fault from comments (G) and the rules, with failed_date (L) |
+| Failed To against department | failed_to (H) |
+| Cleansing coverage | comments (G) against the cleansed fault |
+| Explorer | Any one of the breakdowns above, plus week and month from failed_date (L) |
+
+failed_by (K) is never a chart, a filter or a breakdown. It only appears in the record sheet.
+
 A row is excluded when Failed Date cannot be read, or when comment, Failed To, machine area, and defect type are all empty.
 
 The exact-row fingerprint is a hash of all 17 fields. The event fingerprint omits model, failed by, fixed by, fix date, fix time, and fix. That is what allows a later file to close a fault without counting it again.

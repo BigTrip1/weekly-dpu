@@ -74,6 +74,6 @@ That stops whatever is listening on ports 4000 and 5173. MongoDB keeps running.
 
 Each line is one request: time, method, path, status, and how long it took. After an upload the window also prints the file name and the counts for inserted rows, exact duplicates skipped, closures refreshed, excluded rows, and operational reviews.
 
-The dashboard makes one extra read-only call, `/api/dashboard/trend`, so each dashboard load shows a `/api/dashboard` line and a `/api/dashboard/trend` line.
+The dashboard makes one extra read-only call, `/api/dashboard/trend`, so each dashboard load shows a `/api/dashboard` line and a `/api/dashboard/trend` line. The Analytics page logs lines starting `/api/analytics`.
 
 Inspector names are not printed there. Open a fault on the dashboard to see who recorded it.

@@ -13,12 +13,12 @@ type Panel = DashboardResponse["panels"][number];
 type Props = {
   panel: Panel;
   periodTotal: number;
-  /** Weekly view compares with the previous week. Monthly view compares with the previous month. */
-  weekly: boolean;
+  /** Column heading for the comparison period: previous week, month or year. */
+  previousLabel: string;
   onOpen: (department: string, fault: string) => void;
 };
 
-export function DepartmentPanel({ panel, periodTotal, weekly, onOpen }: Props) {
+export function DepartmentPanel({ panel, periodTotal, previousLabel, onOpen }: Props) {
   const color = departmentColor(panel.department);
   const periodShare = periodTotal ? (panel.total / periodTotal) * 100 : 0;
 
@@ -46,7 +46,7 @@ export function DepartmentPanel({ panel, periodTotal, weekly, onOpen }: Props) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-8">#</TableHead>
               <TableHead>Cleansed inspector fault</TableHead>
-              <TableHead className="text-right">{weekly ? "Prev week QTY" : "Prev month QTY"}</TableHead>
+              <TableHead className="text-right">{previousLabel}</TableHead>
               <TableHead className="text-right">QTY</TableHead>
               <TableHead className="text-center">Trend</TableHead>
               <TableHead className="text-center">Share change</TableHead>
