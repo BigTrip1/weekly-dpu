@@ -6,7 +6,7 @@ The review is two programs, plus MongoDB.
 | --- | --- | --- | --- |
 | API | `backend` | http://127.0.0.1:4213 | Requests and upload summaries |
 | Web page | `frontend` | http://127.0.0.1:3124 | The dashboard |
-| MongoDB | installed separately | 127.0.0.1:27017 | Not started by these steps |
+| MongoDB | installed separately | 127.0.0.1:27017 | Started by `start-dpu.bat` if it is not already running |
 
 Leave the API window and the page window open while you use the review. Closing a window stops that half.
 
@@ -66,9 +66,17 @@ It asks whether to start in Dev or Production. Press D or P. To skip the questio
 | Dev | `npm run dev` in `frontend` (Vite with live reload) | `npm run dev` in `backend` | Editing the code |
 | Production | `npm run build` first, then `npm start` in `frontend` (serves the built files from `frontend/dist`) | `npm start` in `backend` | Sharing the page with others. If the build fails nothing is started |
 
-Both modes use port 3124 for the page and 4213 for the API, so stop one before starting the other. The script checks that `node` exists and that port 27017 accepts a connection. It then opens the two windows. Production does not reload on code changes. Run the script again after a `git pull`.
+Both modes use port 3124 for the page and 4213 for the API, so stop one before starting the other. The script checks that `node` exists and makes sure MongoDB is running before it opens the two windows (see below). Production does not reload on code changes. Run the script again after a `git pull`.
 
-It does not start MongoDB and it does not use Docker.
+### MongoDB
+
+If port 27017 already accepts a connection the script carries on. If not, it starts MongoDB for you and waits up to 40 seconds:
+
+1. When MongoDB is installed as the Windows service `MongoDB`, it runs `net start MongoDB`. If Windows refuses, it asks for administrator rights once and retries.
+2. When there is no service, it runs the newest `mongod.exe` found under `C:\Program Files\MongoDB\Server`, with its data in the `data\db` folder of this project. That folder is ignored by git and starts empty.
+3. When MongoDB is not installed at all it says so and stops.
+
+The script does not use Docker. Starting the two servers by hand with `npm run dev` does not start MongoDB, so start it first.
 
 ## Stop
 
@@ -78,7 +86,7 @@ Close the two windows, or double-click `stop-dpu.bat`.
 stop-dpu.bat
 ```
 
-That stops whatever is listening on ports 4213 and 3124. MongoDB keeps running.
+That stops whatever is listening on ports 4213 and 3124. MongoDB keeps running, and the next start finds it already up.
 
 ## What the API window shows
 

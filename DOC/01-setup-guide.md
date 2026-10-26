@@ -28,7 +28,7 @@ If `npm install --prefix backend` and `npm install --prefix frontend` succeed on
 
 ## First start
 
-1. Start MongoDB and confirm port 27017 is open.
+1. Start MongoDB and confirm port 27017 is open. `start-dpu.bat` does this for you.
 2. Follow [00-start-and-stop.md](00-start-and-stop.md).
 3. Open http://127.0.0.1:3124.
 4. On a brand-new database the API seeds the comment rules and the known department map the first time it connects.

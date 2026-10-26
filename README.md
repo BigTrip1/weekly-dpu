@@ -107,11 +107,11 @@ weekly dpu/
   stop-dpu.bat  Stops those two processes. Leaves MongoDB running.
 ```
 
-MongoDB is a separate program. This app expects it on `mongodb://127.0.0.1:27017`, database `weekly_dpu`.
+MongoDB is a separate program, which you install once. This app expects it on `mongodb://127.0.0.1:27017`, database `weekly_dpu`.
 
 ## Run it
 
-MongoDB must already be listening on port 27017.
+`start-dpu.bat` starts MongoDB for you if it is not already listening on port 27017.
 
 From the project folder, double-click `start-dpu.bat` (it asks for Dev or Production; `start-dpu-dev.bat` and `start-dpu-prod.bat` skip the question), or follow [DOC/00-start-and-stop.md](DOC/00-start-and-stop.md) and start the two processes by hand. Then open http://127.0.0.1:3124. The start script and both servers also print a Network address, for example http://192.168.1.20:3124, which other people on the same network can open. The page is not password protected, so only start it on a network you trust.
 

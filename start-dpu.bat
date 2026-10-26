@@ -19,11 +19,8 @@ choice /c DP /n /m "Start in Dev or Production? (D/P): "
 if errorlevel 2 (set "MODE=prod") else (set "MODE=dev")
 
 :modeChosen
-powershell -NoProfile -Command "try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1',27017); $client.Close(); exit 0 } catch { exit 1 }"
-if errorlevel 1 (
-  echo MongoDB is not listening on 127.0.0.1:27017. Start MongoDB, then run this again.
-  exit /b 1
-)
+call :ensureMongo
+if errorlevel 1 exit /b 1
 
 if /i "%MODE%"=="prod" (
   echo Building the page with npm run build ...
@@ -54,3 +51,44 @@ if errorlevel 1 (
 )
 echo The API window shows who started it, each request, and each upload.
 endlocal
+exit /b 0
+
+:mongoUp
+powershell -NoProfile -Command "try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1',27017); $client.Close(); exit 0 } catch { exit 1 }"
+exit /b %errorlevel%
+
+:ensureMongo
+call :mongoUp
+if not errorlevel 1 (
+  echo MongoDB is already running.
+  exit /b 0
+)
+echo MongoDB is not running. Starting it ...
+sc query MongoDB >nul 2>&1
+if not errorlevel 1 goto startService
+set "MONGOD="
+for /d %%D in ("%ProgramFiles%\MongoDB\Server\*") do if exist "%%D\bin\mongod.exe" set "MONGOD=%%D\bin\mongod.exe"
+if not defined MONGOD goto noMongo
+if not exist "%~dp0data\db" mkdir "%~dp0data\db"
+start "MongoDB" /min "%MONGOD%" --dbpath "%~dp0data\db" --bind_ip 127.0.0.1
+goto waitMongo
+
+:startService
+net start MongoDB >nul 2>&1
+if not errorlevel 1 goto waitMongo
+echo Asking for administrator rights to start the MongoDB service ...
+powershell -NoProfile -Command "Start-Process -FilePath 'net' -ArgumentList 'start','MongoDB' -Verb RunAs -Wait -WindowStyle Hidden"
+goto waitMongo
+
+:waitMongo
+powershell -NoProfile -Command "$end = (Get-Date).AddSeconds(40); while ((Get-Date) -lt $end) { try { $client = New-Object System.Net.Sockets.TcpClient('127.0.0.1',27017); $client.Close(); exit 0 } catch { Start-Sleep -Seconds 1 } }; exit 1"
+if errorlevel 1 (
+  echo MongoDB did not start within 40 seconds. Start it by hand, then run this again.
+  exit /b 1
+)
+echo MongoDB is running.
+exit /b 0
+
+:noMongo
+echo MongoDB is not installed. Install MongoDB Community Server, then run this again.
+exit /b 1
